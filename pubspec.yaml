@@ -1,0 +1,22 @@
+name: travelapp
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  firebase_app_distribution: ^1.3.0
+  firebase_core: ^4.11.0
+  firebase_crashlytics: ^5.2.4
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
