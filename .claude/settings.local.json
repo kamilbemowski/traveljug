@@ -44,7 +44,13 @@
       "Bash(firebase appdistribution:distribute build/app/outputs/flutter-apk/app-debug.apk --app \"1:880548270338:android:8cf0522d7bcdc14c68321b\" --release-notes \"Pierwszy build MVP — $\\(date -Iminutes\\)\")",
       "Bash(git init *)",
       "Bash(git remote *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git rm *)",
+      "Bash(gh label *)",
+      "Bash(python3 *)",
+      "WebFetch(domain:drift.simonbinder.eu)"
     ]
   }
 }
