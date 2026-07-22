@@ -45,3 +45,4 @@ app.*.map.json
 /android/app/release
 flutter_linux_3.44.2-stable.tar.xz
 android/app/google-services.json
+private-key.json
