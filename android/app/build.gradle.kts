@@ -28,11 +28,28 @@ android {
         missingDimensionStrategy("default", "production")
     }
 
+    signingConfigs {
+        create("release") {
+            // CI decodes the keystore to a file and sets KEYSTORE_PATH env var.
+            val ksPath = System.getenv("KEYSTORE_PATH")
+            if (ksPath != null) {
+                storeFile = file(ksPath)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS") ?: "upload"
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Use real keystore if env vars are present (CI); fall back to debug (local dev).
+            val hasKeystore = System.getenv("KEYSTORE_PATH") != null
+            signingConfig = if (hasKeystore) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }
