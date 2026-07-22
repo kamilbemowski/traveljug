@@ -23,7 +23,7 @@ class TripDao extends DatabaseAccessor<AppDatabase> with _$TripDaoMixin {
           destination: destination,
           startDate: Value(startDate),
           endDate: Value(endDate),
-          pace: pace.name,
+          pace: Value(pace.name),
           imageUrl: Value(imageUrl),
         ));
   }

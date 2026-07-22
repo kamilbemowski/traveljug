@@ -21,10 +21,10 @@ class AttractionDao extends DatabaseAccessor<AppDatabase>
   }) {
     return into(db.attractions).insert(AttractionsCompanion.insert(
           name: name,
-          category: category.name,
+          category: Value(category.name),
           durationMin: durationMin,
-          priority: priority,
-          position: position,
+          priority: Value(priority),
+          position: Value(position),
           tripId: tripId,
         ));
   }

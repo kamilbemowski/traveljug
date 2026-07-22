@@ -374,24 +374,24 @@ Write unit tests for both DAOs on an in-memory drift database. Tests run on the 
 
 #### Automated
 
-- [x] 3.1 `dart run build_runner build` generates `trip_dao.g.dart` and `attraction_dao.g.dart`
-- [x] 3.2 `flutter build apk --debug` compiles with DAOs importable
+- [x] 3.1 `dart run build_runner build` generates `trip_dao.g.dart` and `attraction_dao.g.dart` — fa55323
+- [x] 3.2 `flutter build apk --debug` compiles with DAOs importable — fa55323
 
 #### Manual
 
-- [x] 3.3 `lib/database/daos/trip_dao.dart` has 5 CRUD methods
-- [x] 3.4 `lib/database/daos/attraction_dao.dart` has 5 CRUD methods
+- [x] 3.3 `lib/database/daos/trip_dao.dart` has 5 CRUD methods — fa55323
+- [x] 3.4 `lib/database/daos/attraction_dao.dart` has 5 CRUD methods — fa55323
 
 ### Phase 4: Wire database initialization into main.dart
 
 #### Automated
 
-- [ ] 4.1 `flutter build apk --debug` compiles with database init in `main()`
+- [x] 4.1 `flutter build apk --debug` compiles with database init in `main()`
 
 #### Manual
 
-- [ ] 4.2 App launches without crashes on device/emulator
-- [ ] 4.3 `main.dart` imports `app_database.dart` and calls `openAppDatabase()`
+- [x] 4.2 App launches without crashes on device/emulator
+- [x] 4.3 `main.dart` imports `app_database.dart` and calls `openAppDatabase()`
 
 ### Phase 5: Unit tests
 
