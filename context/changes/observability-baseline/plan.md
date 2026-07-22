@@ -126,5 +126,5 @@ The `PlatformDispatcher` handler returns `true` to signal the error was handled 
 
 #### Manual
 
-- [ ] 1.3 Force-crash in debug sends report to Firebase Crashlytics Console
-- [ ] 1.4 `kCrashlyticsDisabled = true` suppresses crash reporting
+- [x] 1.3 Force-crash in debug sends report to Firebase Crashlytics Console
+- [x] 1.4 `kCrashlyticsDisabled = true` suppresses crash reporting
