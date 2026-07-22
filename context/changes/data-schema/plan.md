@@ -361,46 +361,46 @@ Write unit tests for both DAOs on an in-memory drift database. Tests run on the 
 
 #### Automated
 
-- [x] 2.1 `dart run build_runner build` generates `tables.g.dart` and `app_database.g.dart`
-- [x] 2.2 `flutter build apk --debug` compiles
+- [x] 2.1 `dart run build_runner build` generates `tables.g.dart` and `app_database.g.dart` — ede225a
+- [x] 2.2 `flutter build apk --debug` compiles — ede225a
 
 #### Manual
 
-- [x] 2.3 `lib/database/tables.dart` defines `Trips` and `Attractions` table classes with all columns
-- [x] 2.4 `lib/database/app_database.dart` registers both tables, `schemaVersion = 1`
-- [x] 2.5 Generated `.g.dart` files exist in `lib/database/`
+- [x] 2.3 `lib/database/tables.dart` defines `Trips` and `Attractions` table classes with all columns — ede225a
+- [x] 2.4 `lib/database/app_database.dart` registers both tables, `schemaVersion = 1` — ede225a
+- [x] 2.5 Generated `.g.dart` files exist in `lib/database/` — ede225a
 
 ### Phase 3: DAO/CRUD operations
 
 #### Automated
 
-- [ ] 3.1 `dart run build_runner build` generates `trip_dao.g.dart` and `attraction_dao.g.dart`
-- [ ] 3.2 `flutter build apk --debug` compiles with DAOs importable
+- [x] 3.1 `dart run build_runner build` generates `trip_dao.g.dart` and `attraction_dao.g.dart` — fa55323
+- [x] 3.2 `flutter build apk --debug` compiles with DAOs importable — fa55323
 
 #### Manual
 
-- [ ] 3.3 `lib/database/daos/trip_dao.dart` has 5 CRUD methods
-- [ ] 3.4 `lib/database/daos/attraction_dao.dart` has 5 CRUD methods
+- [x] 3.3 `lib/database/daos/trip_dao.dart` has 5 CRUD methods — fa55323
+- [x] 3.4 `lib/database/daos/attraction_dao.dart` has 5 CRUD methods — fa55323
 
 ### Phase 4: Wire database initialization into main.dart
 
 #### Automated
 
-- [ ] 4.1 `flutter build apk --debug` compiles with database init in `main()`
+- [x] 4.1 `flutter build apk --debug` compiles with database init in `main()` — 418ae9d
 
 #### Manual
 
-- [ ] 4.2 App launches without crashes on device/emulator
-- [ ] 4.3 `main.dart` imports `app_database.dart` and calls `openAppDatabase()`
+- [x] 4.2 App launches without crashes on device/emulator — 418ae9d
+- [x] 4.3 `main.dart` imports `app_database.dart` and calls `openAppDatabase()` — 418ae9d
 
 ### Phase 5: Unit tests
 
 #### Automated
 
-- [ ] 5.1 `flutter test` runs all database tests and every test case passes
-- [ ] 5.2 `flutter test --coverage` shows coverage on `lib/database/`
+- [x] 5.1 `flutter test` runs all database tests and every test case passes — f4517ba
+- [x] 5.2 `flutter test --coverage` shows coverage on `lib/database/` — f4517ba
 
 #### Manual
 
-- [ ] 5.3 `test/database/` directory exists with `trip_dao_test.dart` and `attraction_dao_test.dart`
-- [ ] 5.4 Test output shows ≥ 10 test cases passing
+- [x] 5.3 `test/database/` directory exists with `trip_dao_test.dart` and `attraction_dao_test.dart`
+- [x] 5.4 Test output shows ≥ 10 test cases passing
