@@ -386,21 +386,21 @@ Write unit tests for both DAOs on an in-memory drift database. Tests run on the 
 
 #### Automated
 
-- [x] 4.1 `flutter build apk --debug` compiles with database init in `main()`
+- [x] 4.1 `flutter build apk --debug` compiles with database init in `main()` — 418ae9d
 
 #### Manual
 
-- [x] 4.2 App launches without crashes on device/emulator
-- [x] 4.3 `main.dart` imports `app_database.dart` and calls `openAppDatabase()`
+- [x] 4.2 App launches without crashes on device/emulator — 418ae9d
+- [x] 4.3 `main.dart` imports `app_database.dart` and calls `openAppDatabase()` — 418ae9d
 
 ### Phase 5: Unit tests
 
 #### Automated
 
-- [ ] 5.1 `flutter test` runs all database tests and every test case passes
-- [ ] 5.2 `flutter test --coverage` shows coverage on `lib/database/`
+- [x] 5.1 `flutter test` runs all database tests and every test case passes
+- [x] 5.2 `flutter test --coverage` shows coverage on `lib/database/`
 
 #### Manual
 
-- [ ] 5.3 `test/database/` directory exists with `trip_dao_test.dart` and `attraction_dao_test.dart`
-- [ ] 5.4 Test output shows ≥ 10 test cases passing
+- [x] 5.3 `test/database/` directory exists with `trip_dao_test.dart` and `attraction_dao_test.dart`
+- [x] 5.4 Test output shows ≥ 10 test cases passing
