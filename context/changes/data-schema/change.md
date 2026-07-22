@@ -1,7 +1,7 @@
 ---
 change_id: data-schema
 title: "Data schema: Trip + Attraction entities + CRUD"
-status: impl_reviewed
+status: implemented
 roadmap_ref: F-01
 created: 2026-07-17
 updated: 2026-07-17

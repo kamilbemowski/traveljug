@@ -397,8 +397,8 @@ Write unit tests for both DAOs on an in-memory drift database. Tests run on the 
 
 #### Automated
 
-- [x] 5.1 `flutter test` runs all database tests and every test case passes
-- [x] 5.2 `flutter test --coverage` shows coverage on `lib/database/`
+- [x] 5.1 `flutter test` runs all database tests and every test case passes — f4517ba
+- [x] 5.2 `flutter test --coverage` shows coverage on `lib/database/` — f4517ba
 
 #### Manual
 
