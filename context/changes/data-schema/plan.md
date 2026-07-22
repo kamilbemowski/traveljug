@@ -361,14 +361,14 @@ Write unit tests for both DAOs on an in-memory drift database. Tests run on the 
 
 #### Automated
 
-- [ ] 2.1 `dart run build_runner build` generates `tables.g.dart` and `app_database.g.dart`
-- [ ] 2.2 `flutter build apk --debug` compiles
+- [x] 2.1 `dart run build_runner build` generates `tables.g.dart` and `app_database.g.dart`
+- [x] 2.2 `flutter build apk --debug` compiles
 
 #### Manual
 
-- [ ] 2.3 `lib/database/tables.dart` defines `Trips` and `Attractions` table classes with all columns
-- [ ] 2.4 `lib/database/app_database.dart` registers both tables, `schemaVersion = 1`
-- [ ] 2.5 Generated `.g.dart` files exist in `lib/database/`
+- [x] 2.3 `lib/database/tables.dart` defines `Trips` and `Attractions` table classes with all columns
+- [x] 2.4 `lib/database/app_database.dart` registers both tables, `schemaVersion = 1`
+- [x] 2.5 Generated `.g.dart` files exist in `lib/database/`
 
 ### Phase 3: DAO/CRUD operations
 
