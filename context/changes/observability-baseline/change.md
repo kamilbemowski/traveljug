@@ -1,7 +1,7 @@
 ---
 change_id: observability-baseline
 title: "Wire Firebase Crashlytics"
-status: implemented
+status: impl_reviewed
 roadmap_ref: F-02
 created: 2026-07-21
 updated: 2026-07-21

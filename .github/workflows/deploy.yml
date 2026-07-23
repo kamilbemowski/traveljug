@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -80,3 +83,14 @@ jobs:
             --release-notes "${{ github.event.head_commit.message }}"
         env:
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+
+      - name: Create GitHub Release
+        run: |
+          VERSION="v$(grep '^version:' pubspec.yaml | head -1 | awk '{print $2}' | cut -d+ -f1)"
+          gh release create "$VERSION" \
+            build/app/outputs/flutter-apk/app-release.apk \
+            --title "$VERSION" \
+            --notes "${{ github.event.head_commit.message }}" \
+            --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}

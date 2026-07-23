@@ -1,7 +1,7 @@
 ---
 change_id: ci-cd-pipeline
 title: "GitHub Actions — build APK + distribute to Firebase"
-status: implementing
+status: impl_reviewed
 roadmap_ref: F-03
 created: 2026-07-22
 updated: 2026-07-22
