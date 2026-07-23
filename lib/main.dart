@@ -5,17 +5,9 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 
 import 'database/app_database.dart';
+import 'screens/trip_list_screen.dart';
 
 const bool kCrashlyticsDisabled = false;
-
-AppDatabase? _db;
-
-/// Returns the singleton [AppDatabase], initializing it on first call.
-Future<AppDatabase> getDatabase() async {
-  if (_db != null) return _db!;
-  _db = AppDatabase(openAppDatabase());
-  return _db!;
-}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,11 +33,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
-        ),
-      ),
+      home: TripListScreen(),
     );
   }
 }
