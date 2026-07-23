@@ -235,10 +235,10 @@ Create `.github/workflows/deploy.yml` with test + build-and-deploy jobs. This is
 
 #### Automated
 
-- [ ] 3.1 Workflow triggers on push to main
-- [ ] 3.2 `flutter test` passes in CI
-- [ ] 3.3 `flutter build apk --release` succeeds in CI
-- [ ] 3.4 Firebase distribution step completes
+- [x] 3.1 Workflow triggers on push to main
+- [x] 3.2 `flutter test` passes in CI
+- [x] 3.3 `flutter build apk --release` succeeds in CI
+- [x] 3.4 Firebase distribution step completes
 
 #### Manual
 

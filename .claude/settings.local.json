@@ -50,7 +50,17 @@
       "Bash(git rm *)",
       "Bash(gh label *)",
       "Bash(python3 *)",
-      "WebFetch(domain:drift.simonbinder.eu)"
+      "WebFetch(domain:drift.simonbinder.eu)",
+      "Bash(git stash *)",
+      "Bash(gh run *)",
+      "Bash(gh api *)",
+      "Bash(firebase appdistribution:groups:create *)",
+      "Bash(firebase appdistribution:testers:add \"bemeklks@gmail.com\" --group testers --project travelapp-d22a9)",
+      "Bash(gh workflow *)",
+      "Bash(firebase appdistribution:testers:add bemelklks@gmail.com --project travelapp-d22a9)",
+      "Bash(firebase appdistribution:testers:list --project travelapp-d22a9)",
+      "Bash(git checkout *)",
+      "Bash(gh release *)"
     ]
   }
 }
