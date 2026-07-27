@@ -35,6 +35,8 @@ Solo leisure travelers juggle scattered notes, tabs, and memory to plan a trip. 
 | S-01  | create-trip-and-attractions | create a trip, see it in the trip list, and add attractions with name, category, duration, and priority | F-01             | FR-001, FR-002, FR-003, FR-006    | proposed |
 | S-02  | timeline-generation         | see a day-by-day plan with computed times, travel gaps, priority highlights, and overstuffing warnings | S-01, F-01       | FR-004, FR-005, US-01             | proposed |
 | S-03  | manual-plan-adjustments     | reorder, remove, and add items in the plan; manual edits survive timeline recalculation | S-02             | FR-008                            | proposed |
+| S-04  | dynamic-travel-time         | set travel context per trip (city tour / road trip) and see accurate travel times instead of a flat 30 min default | S-03             | FR-004                            | proposed |
+| S-05  | timeline-ux-polish          | see day intensity indicator (low/medium/high), force-overstuff a day to keep attractions together, and get soft warnings for near-full days | S-02             | FR-005                            | proposed |
 
 ## Streams
 
@@ -42,7 +44,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 
 | Stream | Theme              | Chain                          | Note                                                      |
 | ------ | ------------------ | ------------------------------ | --------------------------------------------------------- |
-| A      | Plan trajectory    | `F-01` → `S-01` → `S-02` → `S-03` | Główna ścieżka — od danych przez setup po core i dopracowanie. Sekwencja pionowa, każdy slice zależny od poprzedniego. |
+| A      | Plan trajectory    | `F-01` → `S-01` → `S-02` → `S-03` → `S-04` → `S-05` | Główna ścieżka — od danych przez setup po core, dopracowanie i UX polish. |
 | B      | Infrastructure     | `F-02`, `F-03`                 | Fundamenty infrastrukturalne — niezależne od siebie i od Stream A. Można robić równolegle z F-01. |
 
 ## Baseline
@@ -141,6 +143,34 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** "Manual edits survive recalculation" is the trickiest correctness guarantee in the roadmap. If the recalculation engine (S-02) and the adjustment layer (S-03) have conflicting views of ordering, the plan silently corrupts. Mitigation: define the edit-preservation contract before coding — which fields are user-owned vs engine-owned.
 - **Status:** proposed
 
+### S-04: Dynamic travel time
+
+- **Outcome:** user can set a travel context per trip (city tour or road trip), and the timeline reflects accurate travel times between stops instead of a flat 30-minute default.
+- **Change ID:** dynamic-travel-time
+- **PRD refs:** FR-004
+- **Prerequisites:** S-03 (manual adjustments exist, so travel time changes don't conflict with user edits)
+- **Parallel with:** —
+- **Blockers:** —
+- **Unknowns:**
+  - How to model "travel context" — a new field on Trip, or a per-trip setting? — Owner: dev. Block: no (design decision for `/10x-plan`).
+  - What values for each context (city: 15-20 min, road trip: 60-90 min)? — Owner: dev. Block: no (research during `/10x-plan`).
+- **Risk:** Low. This replaces a hardcoded constant with a configurable value. The algorithm in S-02 is designed to accept a travel-time parameter, so the change is additive — not a rewrite.
+- **Status:** proposed
+
+### S-05: Timeline UX polish — intensity indicator + force overstuff
+
+- **Outcome:** user sees a day intensity indicator (low/medium/high based on % of waking budget used), can force-overstuff a day to keep attractions together on the same day, and sees soft warnings when a day is near capacity.
+- **Change ID:** timeline-ux-polish
+- **PRD refs:** FR-005
+- **Prerequisites:** S-02 (timeline must exist to polish)
+- **Parallel with:** —
+- **Blockers:** —
+- **Unknowns:**
+  - Intensity formula: what thresholds for low/medium/high? — Owner: dev. Block: no (design in `/10x-plan`; likely <50% / 50-80% / >80%).
+  - Force overstuff state: persisted or UI-only? — Owner: dev. Block: no (start with UI-only toggle; persist if needed).
+- **Risk:** Low. Additive changes on top of an already-working timeline. Does not modify the core algorithm.
+- **Status:** proposed
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID                   | Suggested issue title                          | Ready for `/10x-plan` | Notes |
@@ -151,6 +181,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-01       | create-trip-and-attractions | Create trip and add attractions                | no                    | Blocked by F-01 |
 | S-02       | timeline-generation         | Timeline generation with overstuffing warnings | no                    | Blocked by S-01 |
 | S-03       | manual-plan-adjustments     | Manual plan adjustments with edit survival     | no                    | Blocked by S-02 |
+| S-04       | dynamic-travel-time         | Dynamic travel time per trip context           | no                    | Blocked by S-03 |
+| S-05       | timeline-ux-polish          | Timeline UX polish: intensity + force stuff    | no                    | Blocked by S-02 |
 
 ## Open Roadmap Questions
 
