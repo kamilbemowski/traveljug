@@ -1024,16 +1024,309 @@ class AttractionsCompanion extends UpdateCompanion<Attraction> {
   }
 }
 
+class $TimelineOverridesTable extends TimelineOverrides
+    with TableInfo<$TimelineOverridesTable, TimelineOverride> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TimelineOverridesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _attractionIdMeta = const VerificationMeta(
+    'attractionId',
+  );
+  @override
+  late final GeneratedColumn<int> attractionId = GeneratedColumn<int>(
+    'attraction_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'UNIQUE REFERENCES attractions (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _userDayMeta = const VerificationMeta(
+    'userDay',
+  );
+  @override
+  late final GeneratedColumn<int> userDay = GeneratedColumn<int>(
+    'user_day',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _userPositionMeta = const VerificationMeta(
+    'userPosition',
+  );
+  @override
+  late final GeneratedColumn<int> userPosition = GeneratedColumn<int>(
+    'user_position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [attractionId, userDay, userPosition];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'timeline_overrides';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TimelineOverride> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('attraction_id')) {
+      context.handle(
+        _attractionIdMeta,
+        attractionId.isAcceptableOrUnknown(
+          data['attraction_id']!,
+          _attractionIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_attractionIdMeta);
+    }
+    if (data.containsKey('user_day')) {
+      context.handle(
+        _userDayMeta,
+        userDay.isAcceptableOrUnknown(data['user_day']!, _userDayMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_userDayMeta);
+    }
+    if (data.containsKey('user_position')) {
+      context.handle(
+        _userPositionMeta,
+        userPosition.isAcceptableOrUnknown(
+          data['user_position']!,
+          _userPositionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_userPositionMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => const {};
+  @override
+  TimelineOverride map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TimelineOverride(
+      attractionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}attraction_id'],
+      )!,
+      userDay: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}user_day'],
+      )!,
+      userPosition: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}user_position'],
+      )!,
+    );
+  }
+
+  @override
+  $TimelineOverridesTable createAlias(String alias) {
+    return $TimelineOverridesTable(attachedDatabase, alias);
+  }
+}
+
+class TimelineOverride extends DataClass
+    implements Insertable<TimelineOverride> {
+  final int attractionId;
+
+  /// The day index (0-based) where the user wants this attraction.
+  final int userDay;
+
+  /// The position within that day.
+  final int userPosition;
+  const TimelineOverride({
+    required this.attractionId,
+    required this.userDay,
+    required this.userPosition,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['attraction_id'] = Variable<int>(attractionId);
+    map['user_day'] = Variable<int>(userDay);
+    map['user_position'] = Variable<int>(userPosition);
+    return map;
+  }
+
+  TimelineOverridesCompanion toCompanion(bool nullToAbsent) {
+    return TimelineOverridesCompanion(
+      attractionId: Value(attractionId),
+      userDay: Value(userDay),
+      userPosition: Value(userPosition),
+    );
+  }
+
+  factory TimelineOverride.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TimelineOverride(
+      attractionId: serializer.fromJson<int>(json['attractionId']),
+      userDay: serializer.fromJson<int>(json['userDay']),
+      userPosition: serializer.fromJson<int>(json['userPosition']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'attractionId': serializer.toJson<int>(attractionId),
+      'userDay': serializer.toJson<int>(userDay),
+      'userPosition': serializer.toJson<int>(userPosition),
+    };
+  }
+
+  TimelineOverride copyWith({
+    int? attractionId,
+    int? userDay,
+    int? userPosition,
+  }) => TimelineOverride(
+    attractionId: attractionId ?? this.attractionId,
+    userDay: userDay ?? this.userDay,
+    userPosition: userPosition ?? this.userPosition,
+  );
+  TimelineOverride copyWithCompanion(TimelineOverridesCompanion data) {
+    return TimelineOverride(
+      attractionId: data.attractionId.present
+          ? data.attractionId.value
+          : this.attractionId,
+      userDay: data.userDay.present ? data.userDay.value : this.userDay,
+      userPosition: data.userPosition.present
+          ? data.userPosition.value
+          : this.userPosition,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TimelineOverride(')
+          ..write('attractionId: $attractionId, ')
+          ..write('userDay: $userDay, ')
+          ..write('userPosition: $userPosition')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(attractionId, userDay, userPosition);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TimelineOverride &&
+          other.attractionId == this.attractionId &&
+          other.userDay == this.userDay &&
+          other.userPosition == this.userPosition);
+}
+
+class TimelineOverridesCompanion extends UpdateCompanion<TimelineOverride> {
+  final Value<int> attractionId;
+  final Value<int> userDay;
+  final Value<int> userPosition;
+  final Value<int> rowid;
+  const TimelineOverridesCompanion({
+    this.attractionId = const Value.absent(),
+    this.userDay = const Value.absent(),
+    this.userPosition = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TimelineOverridesCompanion.insert({
+    required int attractionId,
+    required int userDay,
+    required int userPosition,
+    this.rowid = const Value.absent(),
+  }) : attractionId = Value(attractionId),
+       userDay = Value(userDay),
+       userPosition = Value(userPosition);
+  static Insertable<TimelineOverride> custom({
+    Expression<int>? attractionId,
+    Expression<int>? userDay,
+    Expression<int>? userPosition,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (attractionId != null) 'attraction_id': attractionId,
+      if (userDay != null) 'user_day': userDay,
+      if (userPosition != null) 'user_position': userPosition,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TimelineOverridesCompanion copyWith({
+    Value<int>? attractionId,
+    Value<int>? userDay,
+    Value<int>? userPosition,
+    Value<int>? rowid,
+  }) {
+    return TimelineOverridesCompanion(
+      attractionId: attractionId ?? this.attractionId,
+      userDay: userDay ?? this.userDay,
+      userPosition: userPosition ?? this.userPosition,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (attractionId.present) {
+      map['attraction_id'] = Variable<int>(attractionId.value);
+    }
+    if (userDay.present) {
+      map['user_day'] = Variable<int>(userDay.value);
+    }
+    if (userPosition.present) {
+      map['user_position'] = Variable<int>(userPosition.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TimelineOverridesCompanion(')
+          ..write('attractionId: $attractionId, ')
+          ..write('userDay: $userDay, ')
+          ..write('userPosition: $userPosition, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $TripsTable trips = $TripsTable(this);
   late final $AttractionsTable attractions = $AttractionsTable(this);
+  late final $TimelineOverridesTable timelineOverrides =
+      $TimelineOverridesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [trips, attractions];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+    trips,
+    attractions,
+    timelineOverrides,
+  ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
     WritePropagation(
@@ -1042,6 +1335,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('attractions', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'attractions',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('timeline_overrides', kind: UpdateKind.delete)],
     ),
   ]);
   @override
@@ -1452,6 +1752,27 @@ final class $$AttractionsTableReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
+
+  static MultiTypedResultKey<$TimelineOverridesTable, List<TimelineOverride>>
+  _timelineOverridesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.timelineOverrides,
+        aliasName: 'attractions__id__timeline_overrides__attraction_id',
+      );
+
+  $$TimelineOverridesTableProcessedTableManager get timelineOverridesRefs {
+    final manager = $$TimelineOverridesTableTableManager(
+      $_db,
+      $_db.timelineOverrides,
+    ).filter((f) => f.attractionId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _timelineOverridesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$AttractionsTableFilterComposer
@@ -1514,6 +1835,31 @@ class $$AttractionsTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> timelineOverridesRefs(
+    Expression<bool> Function($$TimelineOverridesTableFilterComposer f) f,
+  ) {
+    final $$TimelineOverridesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.timelineOverrides,
+      getReferencedColumn: (t) => t.attractionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TimelineOverridesTableFilterComposer(
+            $db: $db,
+            $table: $db.timelineOverrides,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -1631,6 +1977,32 @@ class $$AttractionsTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> timelineOverridesRefs<T extends Object>(
+    Expression<T> Function($$TimelineOverridesTableAnnotationComposer a) f,
+  ) {
+    final $$TimelineOverridesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.timelineOverrides,
+          getReferencedColumn: (t) => t.attractionId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$TimelineOverridesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.timelineOverrides,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$AttractionsTableTableManager
@@ -1646,7 +2018,7 @@ class $$AttractionsTableTableManager
           $$AttractionsTableUpdateCompanionBuilder,
           (Attraction, $$AttractionsTableReferences),
           Attraction,
-          PrefetchHooks Function({bool tripId})
+          PrefetchHooks Function({bool tripId, bool timelineOverridesRefs})
         > {
   $$AttractionsTableTableManager(_$AppDatabase db, $AttractionsTable table)
     : super(
@@ -1703,7 +2075,330 @@ class $$AttractionsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({tripId = false}) {
+          prefetchHooksCallback:
+              ({tripId = false, timelineOverridesRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (timelineOverridesRefs) db.timelineOverrides,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (tripId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.tripId,
+                                    referencedTable:
+                                        $$AttractionsTableReferences
+                                            ._tripIdTable(db),
+                                    referencedColumn:
+                                        $$AttractionsTableReferences
+                                            ._tripIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (timelineOverridesRefs)
+                        await $_getPrefetchedData<
+                          Attraction,
+                          $AttractionsTable,
+                          TimelineOverride
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AttractionsTableReferences
+                              ._timelineOverridesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AttractionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).timelineOverridesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.attractionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$AttractionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AttractionsTable,
+      Attraction,
+      $$AttractionsTableFilterComposer,
+      $$AttractionsTableOrderingComposer,
+      $$AttractionsTableAnnotationComposer,
+      $$AttractionsTableCreateCompanionBuilder,
+      $$AttractionsTableUpdateCompanionBuilder,
+      (Attraction, $$AttractionsTableReferences),
+      Attraction,
+      PrefetchHooks Function({bool tripId, bool timelineOverridesRefs})
+    >;
+typedef $$TimelineOverridesTableCreateCompanionBuilder =
+    TimelineOverridesCompanion Function({
+      required int attractionId,
+      required int userDay,
+      required int userPosition,
+      Value<int> rowid,
+    });
+typedef $$TimelineOverridesTableUpdateCompanionBuilder =
+    TimelineOverridesCompanion Function({
+      Value<int> attractionId,
+      Value<int> userDay,
+      Value<int> userPosition,
+      Value<int> rowid,
+    });
+
+final class $$TimelineOverridesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $TimelineOverridesTable,
+          TimelineOverride
+        > {
+  $$TimelineOverridesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $AttractionsTable _attractionIdTable(_$AppDatabase db) => db
+      .attractions
+      .createAlias('timeline_overrides__attraction_id__attractions__id');
+
+  $$AttractionsTableProcessedTableManager get attractionId {
+    final $_column = $_itemColumn<int>('attraction_id')!;
+
+    final manager = $$AttractionsTableTableManager(
+      $_db,
+      $_db.attractions,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_attractionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$TimelineOverridesTableFilterComposer
+    extends Composer<_$AppDatabase, $TimelineOverridesTable> {
+  $$TimelineOverridesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get userDay => $composableBuilder(
+    column: $table.userDay,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get userPosition => $composableBuilder(
+    column: $table.userPosition,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$AttractionsTableFilterComposer get attractionId {
+    final $$AttractionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.attractionId,
+      referencedTable: $db.attractions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AttractionsTableFilterComposer(
+            $db: $db,
+            $table: $db.attractions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TimelineOverridesTableOrderingComposer
+    extends Composer<_$AppDatabase, $TimelineOverridesTable> {
+  $$TimelineOverridesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get userDay => $composableBuilder(
+    column: $table.userDay,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get userPosition => $composableBuilder(
+    column: $table.userPosition,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$AttractionsTableOrderingComposer get attractionId {
+    final $$AttractionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.attractionId,
+      referencedTable: $db.attractions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AttractionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.attractions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TimelineOverridesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TimelineOverridesTable> {
+  $$TimelineOverridesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get userDay =>
+      $composableBuilder(column: $table.userDay, builder: (column) => column);
+
+  GeneratedColumn<int> get userPosition => $composableBuilder(
+    column: $table.userPosition,
+    builder: (column) => column,
+  );
+
+  $$AttractionsTableAnnotationComposer get attractionId {
+    final $$AttractionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.attractionId,
+      referencedTable: $db.attractions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AttractionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.attractions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TimelineOverridesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TimelineOverridesTable,
+          TimelineOverride,
+          $$TimelineOverridesTableFilterComposer,
+          $$TimelineOverridesTableOrderingComposer,
+          $$TimelineOverridesTableAnnotationComposer,
+          $$TimelineOverridesTableCreateCompanionBuilder,
+          $$TimelineOverridesTableUpdateCompanionBuilder,
+          (TimelineOverride, $$TimelineOverridesTableReferences),
+          TimelineOverride,
+          PrefetchHooks Function({bool attractionId})
+        > {
+  $$TimelineOverridesTableTableManager(
+    _$AppDatabase db,
+    $TimelineOverridesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TimelineOverridesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TimelineOverridesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TimelineOverridesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> attractionId = const Value.absent(),
+                Value<int> userDay = const Value.absent(),
+                Value<int> userPosition = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TimelineOverridesCompanion(
+                attractionId: attractionId,
+                userDay: userDay,
+                userPosition: userPosition,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int attractionId,
+                required int userDay,
+                required int userPosition,
+                Value<int> rowid = const Value.absent(),
+              }) => TimelineOverridesCompanion.insert(
+                attractionId: attractionId,
+                userDay: userDay,
+                userPosition: userPosition,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$TimelineOverridesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({attractionId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -1723,16 +2418,18 @@ class $$AttractionsTableTableManager
                       dynamic
                     >
                   >(state) {
-                    if (tripId) {
+                    if (attractionId) {
                       state =
                           state.withJoin(
                                 currentTable: table,
-                                currentColumn: table.tripId,
-                                referencedTable: $$AttractionsTableReferences
-                                    ._tripIdTable(db),
-                                referencedColumn: $$AttractionsTableReferences
-                                    ._tripIdTable(db)
-                                    .id,
+                                currentColumn: table.attractionId,
+                                referencedTable:
+                                    $$TimelineOverridesTableReferences
+                                        ._attractionIdTable(db),
+                                referencedColumn:
+                                    $$TimelineOverridesTableReferences
+                                        ._attractionIdTable(db)
+                                        .id,
                               )
                               as T;
                     }
@@ -1748,19 +2445,19 @@ class $$AttractionsTableTableManager
       );
 }
 
-typedef $$AttractionsTableProcessedTableManager =
+typedef $$TimelineOverridesTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $AttractionsTable,
-      Attraction,
-      $$AttractionsTableFilterComposer,
-      $$AttractionsTableOrderingComposer,
-      $$AttractionsTableAnnotationComposer,
-      $$AttractionsTableCreateCompanionBuilder,
-      $$AttractionsTableUpdateCompanionBuilder,
-      (Attraction, $$AttractionsTableReferences),
-      Attraction,
-      PrefetchHooks Function({bool tripId})
+      $TimelineOverridesTable,
+      TimelineOverride,
+      $$TimelineOverridesTableFilterComposer,
+      $$TimelineOverridesTableOrderingComposer,
+      $$TimelineOverridesTableAnnotationComposer,
+      $$TimelineOverridesTableCreateCompanionBuilder,
+      $$TimelineOverridesTableUpdateCompanionBuilder,
+      (TimelineOverride, $$TimelineOverridesTableReferences),
+      TimelineOverride,
+      PrefetchHooks Function({bool attractionId})
     >;
 
 class $AppDatabaseManager {
@@ -1770,4 +2467,6 @@ class $AppDatabaseManager {
       $$TripsTableTableManager(_db, _db.trips);
   $$AttractionsTableTableManager get attractions =>
       $$AttractionsTableTableManager(_db, _db.attractions);
+  $$TimelineOverridesTableTableManager get timelineOverrides =>
+      $$TimelineOverridesTableTableManager(_db, _db.timelineOverrides);
 }
