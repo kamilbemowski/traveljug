@@ -90,6 +90,89 @@ class TimelineService {
     return timeline;
   }
 
+  /// Reapplies user overrides to the computed timeline.
+  /// Each override moves an attraction to a user-specified day and position.
+  /// Slots within each day are sorted by their override position.
+  static List<TimelineDay> reapplyOverrides(
+    List<TimelineDay> computed,
+    Map<int, TimelineOverride> overrides,
+  ) {
+    if (overrides.isEmpty) return computed;
+    if (computed.isEmpty) return computed;
+
+    // Collect all slots with their current day index.
+    final allSlots = <_SlotWithOverrides>[];
+    for (var d = 0; d < computed.length; d++) {
+      for (final slot in computed[d].slots) {
+        final ov = overrides[slot.attraction.id];
+        allSlots.add(_SlotWithOverrides(
+          slot: slot,
+          day: ov?.userDay ?? d,
+          position: ov?.userPosition ?? 0,
+          hasOverride: ov != null,
+        ));
+      }
+    }
+
+    // Group by day.
+    final dayMap = <int, List<_SlotWithOverrides>>{};
+    for (final s in allSlots) {
+      dayMap.putIfAbsent(s.day, () => []).add(s);
+    }
+
+    // Sort each day: overridden items first by position, then non-overridden.
+    for (final list in dayMap.values) {
+      list.sort((a, b) {
+        if (a.hasOverride && b.hasOverride) {
+          return a.position.compareTo(b.position);
+        }
+        if (a.hasOverride) return -1;
+        if (b.hasOverride) return 1;
+        return 0;
+      });
+    }
+
+    // Build result. Preserve empty days from original timeline.
+    final result = <TimelineDay>[];
+    final maxDay = dayMap.keys.fold<int>(
+        computed.length - 1, (a, b) => a > b ? a : b);
+    for (var d = 0; d <= maxDay; d++) {
+      final rawSlots = (dayMap[d] ?? []).map((s) => s.slot).toList();
+      final date = d < computed.length
+          ? computed[d].date
+          : computed.last.date.add(Duration(days: d - computed.length + 1));
+
+      // Recompute start times and travel gaps.
+      final config = parsePace('intensive').config; // fallback
+      final travel = (kDefaultTravelMinutes * config.travelMultiplier).round();
+      var currentMin = config.wakeHour * 60;
+      var total = 0;
+      final adjustedSlots = <TimelineSlot>[];
+      for (var i = 0; i < rawSlots.length; i++) {
+        final travelGap = i == 0 ? null : travel;
+        adjustedSlots.add(TimelineSlot(
+          attraction: rawSlots[i].attraction,
+          startMin: currentMin + (travelGap ?? 0),
+          travelFromPrevMin: travelGap,
+        ));
+        total += rawSlots[i].attraction.durationMin + (travelGap ?? 0);
+        currentMin += rawSlots[i].attraction.durationMin + (travelGap ?? 0);
+      }
+
+      final dailyBudget = config.wakingMinutes;
+      final overstuffed = total > dailyBudget;
+      result.add(TimelineDay(
+        date: date,
+        slots: adjustedSlots,
+        totalMin: total,
+        overstuffed: overstuffed,
+        tightSchedule: !overstuffed && total >= dailyBudget * 0.8,
+      ));
+    }
+
+    return result;
+  }
+
   /// Generates a list of dates from [start] to [end] (inclusive).
   static List<DateTime> _dateRange(DateTime start, DateTime end) {
     final normalizedStart = DateTime(start.year, start.month, start.day);
@@ -102,4 +185,18 @@ class TimelineService {
     }
     return days;
   }
+}
+
+class _SlotWithOverrides {
+  final TimelineSlot slot;
+  final int day;
+  final int position;
+  final bool hasOverride;
+
+  _SlotWithOverrides({
+    required this.slot,
+    required this.day,
+    required this.position,
+    required this.hasOverride,
+  });
 }

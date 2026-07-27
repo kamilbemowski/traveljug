@@ -238,4 +238,70 @@ void main() {
       expect(result[0].slots[2].isMustHave, isFalse);
     });
   });
+
+  group('TimelineService.reapplyOverrides', () {
+    final today = DateTime(2026, 7, 24);
+
+    test('no overrides returns unchanged timeline', () {
+      final trip = _trip(startDate: today, endDate: today);
+      final computed = TimelineService.computeTimeline(
+        trip,
+        [_attr(id: 1, durationMin: 60)],
+      );
+      final result = TimelineService.reapplyOverrides(computed, {});
+      expect(result.length, computed.length);
+      expect(result[0].slots.length, computed[0].slots.length);
+    });
+
+    test('move to different day', () {
+      final trip = _trip(
+        startDate: today,
+        endDate: today.add(const Duration(days: 1)),
+      );
+      final computed = TimelineService.computeTimeline(
+        trip,
+        [
+          _attr(id: 1, durationMin: 500, position: 0),
+          _attr(id: 2, durationMin: 500, position: 1),
+        ],
+      );
+      // Attr 1 is in day 0, attr 2 in day 1. Move attr 1 to day 1.
+      final overrides = {
+        1: TimelineOverride(
+          attractionId: 1,
+          userDay: 1,
+          userPosition: 0,
+        ),
+      };
+      final result = TimelineService.reapplyOverrides(computed, overrides);
+      // Day 0 is empty (preserved), day 1 has both attractions.
+      expect(result.length, 2);
+      expect(result[0].slots.length, 0); // empty day preserved
+      expect(result[1].slots.length, 2);
+    });
+
+    test('multiple overrides applied', () {
+      final trip = _trip(
+        startDate: today,
+        endDate: today.add(const Duration(days: 1)),
+      );
+      final computed = TimelineService.computeTimeline(
+        trip,
+        [
+          _attr(id: 1, durationMin: 300, position: 0),
+          _attr(id: 2, durationMin: 300, position: 1),
+          _attr(id: 3, durationMin: 300, position: 2),
+        ],
+      );
+      final overrides = {
+        2: TimelineOverride(
+            attractionId: 2, userDay: 1, userPosition: 0),
+        3: TimelineOverride(
+            attractionId: 3, userDay: 1, userPosition: 1),
+      };
+      final result = TimelineService.reapplyOverrides(computed, overrides);
+      expect(result[0].slots.length, 1); // only attr 1 in day 0
+      expect(result[1].slots.length, 2); // attr 2 and 3 in day 1
+    });
+  });
 }

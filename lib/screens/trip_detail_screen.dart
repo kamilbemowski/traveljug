@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../database/app_database.dart';
 import '../database/daos/attraction_dao.dart';
+import '../database/daos/timeline_override_dao.dart';
 import '../database/daos/trip_dao.dart';
 import '../database/tables.dart';
 import '../models/timeline_day.dart';
@@ -39,39 +40,75 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     if (!mounted) return;
 
     if (trip == null) {
-      setState(() {
-        _error = 'Trip not found';
-        _loading = false;
-      });
+      setState(() { _error = 'Trip not found'; _loading = false; });
       return;
     }
 
     if (trip.startDate == null || trip.endDate == null) {
-      setState(() {
-        _trip = trip;
-        _error = 'Add trip dates to see your plan';
-        _loading = false;
-      });
+      setState(() { _trip = trip; _error = 'Add trip dates to see your plan'; _loading = false; });
       return;
     }
 
     if (attractions.isEmpty) {
-      setState(() {
-        _trip = trip;
-        _error = 'Add attractions to see your plan';
-        _loading = false;
-      });
+      setState(() { _trip = trip; _error = 'Add attractions to see your plan'; _loading = false; });
       return;
     }
 
-    final timeline = TimelineService.computeTimeline(trip, attractions);
+    final computed = TimelineService.computeTimeline(trip, attractions);
+    final overrideDao = TimelineOverrideDao(db);
+    final overrides = await overrideDao.loadOverridesByTrip(widget.trip.id);
+    final timeline = TimelineService.reapplyOverrides(computed, overrides);
 
-    setState(() {
-      _trip = trip;
-      _timeline = timeline;
-      _error = null;
-      _loading = false;
-    });
+    setState(() { _trip = trip; _timeline = timeline; _error = null; _loading = false; });
+  }
+
+  Future<void> _handleReorder(int dayIndex, int oldIndex, int newIndex) async {
+    final day = _timeline[dayIndex];
+    final slots = List<TimelineSlot>.from(day.slots);
+    final item = slots.removeAt(oldIndex);
+    slots.insert(newIndex, item);
+
+    final db = await getDatabase();
+    final dao = TimelineOverrideDao(db);
+    for (var i = 0; i < slots.length; i++) {
+      await dao.upsertOverride(slots[i].attraction.id, dayIndex, i);
+    }
+    if (!mounted) return;
+    _loadTimeline();
+  }
+
+  Future<void> _handleMoveDay(int dayIndex, int slotIndex, int direction) async {
+    final db = await getDatabase();
+    final dao = TimelineOverrideDao(db);
+    final slot = _timeline[dayIndex].slots[slotIndex];
+    final targetDay = dayIndex + direction;
+    await dao.upsertOverride(slot.attraction.id, targetDay, 0);
+    if (!mounted) return;
+    _loadTimeline();
+  }
+
+  Future<void> _handleDelete(int slotIndex, int dayIndex) async {
+    final slot = _timeline[dayIndex].slots[slotIndex];
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Remove from plan?'),
+        content: Text('Remove "${slot.attraction.name}"?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Remove')),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    final db = await getDatabase();
+    final attractionDao = AttractionDao(db);
+    await attractionDao.deleteAttraction(slot.attraction.id);
+    final overrideDao = TimelineOverrideDao(db);
+    await overrideDao.deleteOverride(slot.attraction.id);
+    if (!mounted) return;
+    _loadTimeline();
   }
 
   @override
@@ -98,17 +135,9 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              _error!.contains('dates') ? Icons.calendar_today : Icons.place,
-              size: 48,
-              color: Colors.grey,
-            ),
+            Icon(_error!.contains('dates') ? Icons.calendar_today : Icons.place, size: 48, color: Colors.grey),
             const SizedBox(height: 16),
-            Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
-            ),
+            Text(_error!, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16, color: Colors.grey)),
           ],
         ),
       ),
@@ -120,29 +149,31 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Trip info header
         Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(t.destination,
-                  style: Theme.of(context).textTheme.headlineSmall),
+              Text(t.destination, style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: 4),
-              Text('${_formatDate(t.startDate)} → ${_formatDate(t.endDate)}',
-                  style: const TextStyle(color: Colors.grey)),
-              Text('Pace: ${t.pace}',
-                  style: const TextStyle(color: Colors.grey)),
+              Text('${_formatDate(t.startDate)} → ${_formatDate(t.endDate)}', style: const TextStyle(color: Colors.grey)),
+              Text('Pace: ${t.pace}', style: const TextStyle(color: Colors.grey)),
             ],
           ),
         ),
-        // Day-by-day timeline
         Expanded(
           child: ListView.builder(
             itemCount: _timeline.length,
             itemBuilder: (context, index) {
-              final day = _timeline[index];
-              return _DaySection(day: day, dayNumber: index + 1);
+              return _DaySection(
+                day: _timeline[index],
+                dayIndex: index,
+                dayNumber: index + 1,
+                totalDays: _timeline.length,
+                onReorder: (oldIdx, newIdx) => _handleReorder(index, oldIdx, newIdx),
+                onMoveDay: (slotIdx, dir) => _handleMoveDay(index, slotIdx, dir),
+                onDelete: (slotIdx) => _handleDelete(slotIdx, index),
+              );
             },
           ),
         ),
@@ -160,23 +191,33 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       context: context,
       builder: (_) => _AddAttractionDialog(tripId: widget.trip.id),
     );
-    if (result == true) {
-      _loadTimeline();
-    }
+    if (result == true) _loadTimeline();
   }
 }
 
-/// A single day section in the timeline.
+/// A single day section in the timeline — now interactive.
 class _DaySection extends StatelessWidget {
   final TimelineDay day;
+  final int dayIndex;
   final int dayNumber;
+  final int totalDays;
+  final void Function(int oldIndex, int newIndex) onReorder;
+  final void Function(int slotIndex, int direction) onMoveDay;
+  final void Function(int slotIndex) onDelete;
 
-  const _DaySection({required this.day, required this.dayNumber});
+  const _DaySection({
+    required this.day,
+    required this.dayIndex,
+    required this.dayNumber,
+    required this.totalDays,
+    required this.onReorder,
+    required this.onMoveDay,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final dateStr =
-        '${day.date.day}.${day.date.month}.${day.date.year}';
+    final dateStr = '${day.date.day}.${day.date.month}.${day.date.year}';
     final hours = day.totalMin ~/ 60;
     final mins = day.totalMin % 60;
 
@@ -185,37 +226,21 @@ class _DaySection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Day header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: day.overstuffed
-                  ? Colors.red.shade50
-                  : Colors.blue.shade50,
+              color: day.overstuffed ? Colors.red.shade50 : Colors.blue.shade50,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
             ),
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    'Day $dayNumber — $dateStr',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
+                  child: Text('Day $dayNumber — $dateStr', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 ),
-                Text(
-                  '${hours}h ${mins}m',
-                  style: TextStyle(
-                    color: day.overstuffed ? Colors.red : Colors.grey.shade700,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text('${hours}h ${mins}m', style: TextStyle(color: day.overstuffed ? Colors.red : Colors.grey.shade700, fontWeight: FontWeight.w500)),
               ],
             ),
           ),
-          // Overstuffing warning
           if (day.overstuffed)
             Container(
               width: double.infinity,
@@ -225,19 +250,10 @@ class _DaySection extends StatelessWidget {
                 children: [
                   Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
                   SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'This day is overstuffed',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
+                  Expanded(child: Text('This day is overstuffed', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500))),
                 ],
               ),
             ),
-          // Tight schedule (near-full but not overstuffed)
           if (day.tightSchedule && !day.overstuffed)
             Container(
               width: double.infinity,
@@ -247,31 +263,53 @@ class _DaySection extends StatelessWidget {
                 children: [
                   Icon(Icons.info_outline, color: Colors.orange, size: 18),
                   SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Tight schedule',
-                      style: TextStyle(
-                        color: Colors.orange,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
+                  Expanded(child: Text('Tight schedule', style: TextStyle(color: Colors.orange, fontSize: 13))),
                 ],
               ),
             ),
-          // Attraction slots
-          ...day.slots.map((slot) => _SlotTile(slot: slot)),
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: day.slots.length,
+            onReorderItem: onReorder,
+            proxyDecorator: (child, index, animation) => Material(elevation: 4, child: child),
+            itemBuilder: (context, index) {
+              final slot = day.slots[index];
+              return _SlotTile(
+                key: ValueKey(slot.attraction.id),
+                slot: slot,
+                dayIndex: dayIndex,
+                slotIndex: index,
+                totalDays: totalDays,
+                onMoveDay: onMoveDay,
+                onDelete: onDelete,
+              );
+            },
+          ),
         ],
       ),
     );
   }
 }
 
-/// A single attraction slot within a day.
+/// Interactive attraction slot with move-day and delete buttons.
 class _SlotTile extends StatelessWidget {
   final TimelineSlot slot;
+  final int dayIndex;
+  final int slotIndex;
+  final int totalDays;
+  final void Function(int slotIndex, int direction) onMoveDay;
+  final void Function(int slotIndex) onDelete;
 
-  const _SlotTile({required this.slot});
+  const _SlotTile({
+    super.key,
+    required this.slot,
+    required this.dayIndex,
+    required this.slotIndex,
+    required this.totalDays,
+    required this.onMoveDay,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -280,25 +318,27 @@ class _SlotTile extends StatelessWidget {
       title: Row(
         children: [
           Expanded(child: Text(slot.attraction.name)),
-          if (slot.isMustHave)
-            const Icon(Icons.star, size: 18, color: Colors.amber),
+          if (slot.isMustHave) const Icon(Icons.star, size: 18, color: Colors.amber),
         ],
       ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '${slot.startTime} · ${slot.attraction.category} · ${slot.attraction.durationMin} min',
-            style: const TextStyle(fontSize: 13),
-          ),
-          if (slot.travelFromPrevMin != null)
-            Text(
-              '← ${slot.travelFromPrevMin} min travel',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            ),
+          Text('${slot.startTime} · ${slot.attraction.category} · ${slot.attraction.durationMin} min', style: const TextStyle(fontSize: 13)),
+          if (slot.travelFromPrevMin != null) Text('← ${slot.travelFromPrevMin} min travel', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
         ],
       ),
       isThreeLine: slot.travelFromPrevMin != null,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (dayIndex > 0)
+            IconButton(icon: const Icon(Icons.arrow_back, size: 18), onPressed: () => onMoveDay(slotIndex, -1), tooltip: 'Move to previous day', visualDensity: VisualDensity.compact),
+          if (dayIndex < totalDays - 1)
+            IconButton(icon: const Icon(Icons.arrow_forward, size: 18), onPressed: () => onMoveDay(slotIndex, 1), tooltip: 'Move to next day', visualDensity: VisualDensity.compact),
+          IconButton(icon: const Icon(Icons.close, size: 18, color: Colors.red), onPressed: () => onDelete(slotIndex), tooltip: 'Remove from plan', visualDensity: VisualDensity.compact),
+        ],
+      ),
     );
   }
 
@@ -313,13 +353,11 @@ class _SlotTile extends StatelessWidget {
   }
 }
 
-// ── _AddAttractionDialog (unchanged from S-01) ──
+// ── _AddAttractionDialog ──
 
 class _AddAttractionDialog extends StatefulWidget {
   final int tripId;
-
   const _AddAttractionDialog({required this.tripId});
-
   @override
   State<_AddAttractionDialog> createState() => _AddAttractionDialogState();
 }
@@ -340,21 +378,15 @@ class _AddAttractionDialogState extends State<_AddAttractionDialog> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-
     final db = await getDatabase();
     final dao = AttractionDao(db);
     final existing = await dao.listAttractionsByTrip(widget.tripId);
-    final position = existing.length;
-
     await dao.createAttraction(
       name: _nameController.text.trim(),
       durationMin: int.parse(_durationController.text.trim()),
-      tripId: widget.tripId,
-      category: _category,
-      priority: _priority,
-      position: position,
+      tripId: widget.tripId, category: _category, priority: _priority,
+      position: existing.length,
     );
-
     if (!mounted) return;
     Navigator.pop(context, true);
   }
@@ -368,65 +400,16 @@ class _AddAttractionDialogState extends State<_AddAttractionDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Name *'),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Name is required' : null,
-            ),
-            DropdownButtonFormField<AttractionCategory>(
-              initialValue: _category,
-              decoration: const InputDecoration(labelText: 'Category'),
-              items: AttractionCategory.values.map((c) {
-                return DropdownMenuItem(
-                  value: c,
-                  child: Text(c.name[0].toUpperCase() + c.name.substring(1)),
-                );
-              }).toList(),
-              onChanged: (v) {
-                if (v != null) setState(() => _category = v);
-              },
-            ),
-            TextFormField(
-              controller: _durationController,
-              decoration:
-                  const InputDecoration(labelText: 'Duration (minutes) *'),
-              keyboardType: TextInputType.number,
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return 'Duration is required';
-                }
-                final n = int.tryParse(v.trim());
-                if (n == null || n <= 0) {
-                  return 'Must be a positive number';
-                }
-                return null;
-              },
-            ),
-            DropdownButtonFormField<int>(
-              initialValue: _priority,
-              decoration: const InputDecoration(labelText: 'Priority'),
-              items: const [
-                DropdownMenuItem(value: 0, child: Text('Must-have')),
-                DropdownMenuItem(value: 1, child: Text('Nice-to-have')),
-                DropdownMenuItem(value: 2, child: Text('Optional')),
-              ],
-              onChanged: (v) {
-                if (v != null) setState(() => _priority = v);
-              },
-            ),
+            TextFormField(controller: _nameController, decoration: const InputDecoration(labelText: 'Name *'), validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null),
+            DropdownButtonFormField<AttractionCategory>(initialValue: _category, decoration: const InputDecoration(labelText: 'Category'), items: AttractionCategory.values.map((c) => DropdownMenuItem(value: c, child: Text(c.name[0].toUpperCase() + c.name.substring(1)))).toList(), onChanged: (v) { if (v != null) setState(() => _category = v); }),
+            TextFormField(controller: _durationController, decoration: const InputDecoration(labelText: 'Duration (minutes) *'), keyboardType: TextInputType.number, validator: (v) { if (v == null || v.trim().isEmpty) return 'Duration is required'; final n = int.tryParse(v.trim()); if (n == null || n <= 0) return 'Must be a positive number'; return null; }),
+            DropdownButtonFormField<int>(initialValue: _priority, decoration: const InputDecoration(labelText: 'Priority'), items: const [DropdownMenuItem(value: 0, child: Text('Must-have')), DropdownMenuItem(value: 1, child: Text('Nice-to-have')), DropdownMenuItem(value: 2, child: Text('Optional'))], onChanged: (v) { if (v != null) setState(() => _priority = v); }),
           ],
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: _save,
-          child: const Text('Save'),
-        ),
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        ElevatedButton(onPressed: _save, child: const Text('Save')),
       ],
     );
   }

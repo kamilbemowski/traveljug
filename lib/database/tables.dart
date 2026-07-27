@@ -67,3 +67,18 @@ class Attractions extends Table {
         onDelete: KeyAction.cascade,
       )();
 }
+
+/// Stores user manual edits to the timeline. One row per overridden attraction.
+class TimelineOverrides extends Table {
+  IntColumn get attractionId => integer().unique().references(
+        Attractions,
+        #id,
+        onDelete: KeyAction.cascade,
+      )();
+
+  /// The day index (0-based) where the user wants this attraction.
+  IntColumn get userDay => integer()();
+
+  /// The position within that day.
+  IntColumn get userPosition => integer()();
+}
