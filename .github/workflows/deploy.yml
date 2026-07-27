@@ -86,11 +86,15 @@ jobs:
 
       - name: Create GitHub Release
         run: |
-          VERSION="v$(grep '^version:' pubspec.yaml | head -1 | awk '{print $2}' | cut -d+ -f1)"
-          gh release create "$VERSION" \
+          BASE="v$(grep '^version:' pubspec.yaml | head -1 | awk '{print $2}' | cut -d+ -f1)"
+          VERSION="${BASE}-build${{ github.run_number }}"
+          # Delete existing tag for this base version if it exists.
+          git tag -d "$BASE" 2>/dev/null || true
+          git push origin ":refs/tags/$BASE" 2>/dev/null || true
+          gh release create "$BASE" \
             build/app/outputs/flutter-apk/app-release.apk \
             --title "$VERSION" \
             --notes "${{ github.event.head_commit.message }}" \
-            --generate-notes
+            --prerelease
         env:
           GH_TOKEN: ${{ github.token }}
