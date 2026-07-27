@@ -22,9 +22,37 @@ After implementing a change or fix — when the work is done and you want to lan
 When invoked:
 
 1. If `[file paths to stage]` arguments were provided, use them. Otherwise default to staging all tracked, modified files (`git add -u`) plus new untracked files in the working tree.
-2. Proceed to Step 1.
+2. Proceed to Step 0.
 
 ## Workflow
+
+### Step 0 — Run tests and analysis (mandatory gate)
+
+Before committing, run automated checks:
+
+```bash
+flutter analyze
+flutter test
+```
+
+- **Both pass** → proceed to Step 1.
+- **Either fails** → print the failure output, then ask:
+
+  AskUserQuestion:
+  - question: "Checks failed. How to proceed?"
+    header: "Check fail"
+    options:
+    - label: "Fix & retry"
+      description: "I'll fix the issues and re-run checks."
+    - label: "Skip checks & commit anyway"
+      description: "Commit despite failing checks. You accept the risk."
+    - label: "Abort"
+      description: "Cancel — I'll fix manually."
+      multiSelect: false
+
+  On "Fix & retry": fix the issues, re-run checks, loop.
+  On "Skip checks": proceed to Step 1.
+  On "Abort": STOP.
 
 ### Step 1 — Detect ticket reference
 
