@@ -27,3 +27,23 @@ class AppDatabase extends _$AppDatabase {
 QueryExecutor openAppDatabase() {
   return driftDatabase(name: 'travelapp_db');
 }
+
+AppDatabase? _db;
+
+/// Returns the singleton [AppDatabase], initializing it on first call.
+Future<AppDatabase> getDatabase() async {
+  if (_db != null) return _db!;
+  _db = AppDatabase(openAppDatabase());
+  return _db!;
+}
+
+/// Injects a test database so widget tests don't hit the real SQLite file.
+/// Call in test setUp, then call [clearTestDatabase] in tearDown.
+void setTestDatabase(AppDatabase db) {
+  _db = db;
+}
+
+/// Resets the database singleton after a test.
+void clearTestDatabase() {
+  _db = null;
+}
