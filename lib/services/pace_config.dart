@@ -10,13 +10,11 @@ class PaceConfig {
   final int sleepHour;
   final int wakingMinutes;
   final double travelMultiplier;
-  final int maxAttractionsPerDay;
 
   const PaceConfig({
     required this.wakeHour,
     required this.sleepHour,
     required this.travelMultiplier,
-    required this.maxAttractionsPerDay,
   }) : wakingMinutes = (sleepHour - wakeHour) * 60;
 }
 
@@ -27,13 +25,11 @@ extension TravelPaceConfig on TravelPace {
               wakeHour: 7,
               sleepHour: 23,
               travelMultiplier: 0.7,
-              maxAttractionsPerDay: 6,
             ),
         TravelPace.relaxing => const PaceConfig(
               wakeHour: 10,
               sleepHour: 20,
               travelMultiplier: 1.5,
-              maxAttractionsPerDay: 3,
             ),
       };
 }
@@ -41,5 +37,9 @@ extension TravelPaceConfig on TravelPace {
 /// Safe-parses a pace string, defaulting to [TravelPace.intensive].
 TravelPace parsePace(String? paceName) {
   if (paceName == null) return TravelPace.intensive;
-  return TravelPace.values.byName(paceName);
+  try {
+    return TravelPace.values.byName(paceName);
+  } on ArgumentError {
+    return TravelPace.intensive;
+  }
 }
