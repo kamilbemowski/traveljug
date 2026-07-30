@@ -237,6 +237,82 @@ void main() {
       expect(result[0].slots[1].isMustHave, isFalse);
       expect(result[0].slots[2].isMustHave, isFalse);
     });
+
+    test('exactly at budget — not overstuffed', () {
+      final trip = _trip(startDate: today, endDate: today);
+      final result = TimelineService.computeTimeline(trip, [_attr(id: 1, durationMin: 960)]);
+      expect(result[0].overstuffed, isFalse);
+    });
+
+    test('exactly at 80% — tightSchedule=true', () {
+      final trip = _trip(startDate: today, endDate: today);
+      final result = TimelineService.computeTimeline(trip, [_attr(id: 1, durationMin: 768)]);
+      expect(result[0].tightSchedule, isTrue);
+      expect(result[0].overstuffed, isFalse);
+    });
+
+    test('one below 80% — tightSchedule=false', () {
+      final trip = _trip(startDate: today, endDate: today);
+      final result = TimelineService.computeTimeline(trip, [_attr(id: 1, durationMin: 767)]);
+      expect(result[0].tightSchedule, isFalse);
+    });
+
+    test('one above budget — overstuffed=true', () {
+      final trip = _trip(startDate: today, endDate: today);
+      final result = TimelineService.computeTimeline(trip, [_attr(id: 1, durationMin: 961)]);
+      expect(result[0].overstuffed, isTrue);
+    });
+
+    test('tightSchedule on split non-final day at 85%', () {
+      final trip = _trip(startDate: today, endDate: today.add(const Duration(days: 2)));
+      final result = TimelineService.computeTimeline(trip, [
+        _attr(id: 1, durationMin: 820, position: 0),
+        _attr(id: 2, durationMin: 200, position: 1),
+      ]);
+      expect(result[0].tightSchedule, isTrue);
+      expect(result[0].overstuffed, isFalse);
+    });
+
+    test('5-day trip with 12 attractions', () {
+      final trip = _trip(startDate: today, endDate: today.add(const Duration(days: 4)));
+      final attrs = List.generate(12, (i) => _attr(id: i + 1, durationMin: 120, position: i));
+      final result = TimelineService.computeTimeline(trip, attrs);
+      expect(result.length, greaterThan(1));
+    });
+
+    test('reversed dates crash', () {
+      final trip = _trip(startDate: today.add(const Duration(days: 2)), endDate: today);
+      expect(
+        () => TimelineService.computeTimeline(trip, [_attr(id: 1, durationMin: 60)]),
+        throwsA(isA<RangeError>()),
+      );
+    });
+
+    test('startMin overflow on overstuffed day', () {
+      final trip = _trip(startDate: today, endDate: today);
+      final result = TimelineService.computeTimeline(trip, [
+        _attr(id: 1, durationMin: 500, position: 0),
+        _attr(id: 2, durationMin: 480, position: 1),
+        _attr(id: 3, durationMin: 120, position: 2),
+      ]);
+      expect(result[0].overstuffed, isTrue);
+      expect(result[0].slots[2].startMin, greaterThan(1440));
+    });
+
+    test('relaxing first slot at 10:00', () {
+      final trip = _trip(startDate: today, endDate: today, pace: 'relaxing');
+      final result = TimelineService.computeTimeline(trip, [_attr(id: 1, durationMin: 60)]);
+      expect(result[0].slots[0].startMin, 600);
+    });
+
+    test('relaxing travel gap 45 min', () {
+      final trip = _trip(startDate: today, endDate: today, pace: 'relaxing');
+      final result = TimelineService.computeTimeline(trip, [
+        _attr(id: 1, durationMin: 60, position: 0),
+        _attr(id: 2, durationMin: 60, position: 1),
+      ]);
+      expect(result[0].slots[1].travelFromPrevMin, 45);
+    });
   });
 
   group('TimelineService.reapplyOverrides', () {
