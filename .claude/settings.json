@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'flutter analyze; exit_code=$?; if [ $exit_code -eq 1 ]; then exit 2; fi; exit $exit_code'",
+            "timeout": 30000
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=$(jq -r .tool_input.file_path); case \"$FILE\" in lib/services/*) TEST_DIR=\"test/services/\" ;; lib/database/*) TEST_DIR=\"test/database/\" ;; lib/screens/*) TEST_DIR=\"test/screens/\" ;; *) exit 0 ;; esac; echo \"[hook] running flutter test $TEST_DIR\"; flutter test \"$TEST_DIR\" 2>&1; exit_code=$?; if [ $exit_code -eq 1 ]; then exit 2; fi; exit $exit_code'",
+            "timeout": 60000
+          }
+        ]
+      }
+    ]
+  }
+}
