@@ -29,6 +29,12 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     _loadTimeline();
   }
 
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red.shade700),
+    );
+  }
+
   Future<void> _loadTimeline() async {
     final db = await getDatabase();
     final tripDao = TripDao(db);
@@ -68,21 +74,33 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     final item = slots.removeAt(oldIndex);
     slots.insert(newIndex, item);
 
-    final db = await getDatabase();
-    final dao = TimelineOverrideDao(db);
-    for (var i = 0; i < slots.length; i++) {
-      await dao.upsertOverride(slots[i].attraction.id, dayIndex, i);
+    try {
+      final db = await getDatabase();
+      final dao = TimelineOverrideDao(db);
+      for (var i = 0; i < slots.length; i++) {
+        await dao.upsertOverride(slots[i].attraction.id, dayIndex, i);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showError('Failed to reorder attractions. Please try again.');
+      return;
     }
     if (!mounted) return;
     _loadTimeline();
   }
 
   Future<void> _handleMoveDay(int dayIndex, int slotIndex, int direction) async {
-    final db = await getDatabase();
-    final dao = TimelineOverrideDao(db);
-    final slot = _timeline[dayIndex].slots[slotIndex];
-    final targetDay = dayIndex + direction;
-    await dao.upsertOverride(slot.attraction.id, targetDay, 0);
+    try {
+      final db = await getDatabase();
+      final dao = TimelineOverrideDao(db);
+      final slot = _timeline[dayIndex].slots[slotIndex];
+      final targetDay = dayIndex + direction;
+      await dao.upsertOverride(slot.attraction.id, targetDay, 0);
+    } catch (e) {
+      if (!mounted) return;
+      _showError('Failed to move attraction. Please try again.');
+      return;
+    }
     if (!mounted) return;
     _loadTimeline();
   }
@@ -102,11 +120,17 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     );
     if (confirm != true) return;
 
-    final db = await getDatabase();
-    final attractionDao = AttractionDao(db);
-    await attractionDao.deleteAttraction(slot.attraction.id);
-    final overrideDao = TimelineOverrideDao(db);
-    await overrideDao.deleteOverride(slot.attraction.id);
+    try {
+      final db = await getDatabase();
+      final attractionDao = AttractionDao(db);
+      await attractionDao.deleteAttraction(slot.attraction.id);
+      final overrideDao = TimelineOverrideDao(db);
+      await overrideDao.deleteOverride(slot.attraction.id);
+    } catch (e) {
+      if (!mounted) return;
+      _showError('Failed to remove attraction. Please try again.');
+      return;
+    }
     if (!mounted) return;
     _loadTimeline();
   }
@@ -378,15 +402,23 @@ class _AddAttractionDialogState extends State<_AddAttractionDialog> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    final db = await getDatabase();
-    final dao = AttractionDao(db);
-    final existing = await dao.listAttractionsByTrip(widget.tripId);
-    await dao.createAttraction(
-      name: _nameController.text.trim(),
-      durationMin: int.parse(_durationController.text.trim()),
-      tripId: widget.tripId, category: _category, priority: _priority,
-      position: existing.length,
-    );
+    try {
+      final db = await getDatabase();
+      final dao = AttractionDao(db);
+      final existing = await dao.listAttractionsByTrip(widget.tripId);
+      await dao.createAttraction(
+        name: _nameController.text.trim(),
+        durationMin: int.parse(_durationController.text.trim()),
+        tripId: widget.tripId, category: _category, priority: _priority,
+        position: existing.length,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to save attraction. Please try again.')),
+      );
+      return;
+    }
     if (!mounted) return;
     Navigator.pop(context, true);
   }

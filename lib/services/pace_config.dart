@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../database/tables.dart';
 
 /// Default travel time between consecutive attractions (in minutes).
@@ -40,6 +42,11 @@ TravelPace parsePace(String? paceName) {
   try {
     return TravelPace.values.byName(paceName);
   } on ArgumentError {
+    // Log to console — Crashlytics picks this up via captureConsoleIntegration-like
+    // behavior if a logging observer is wired. In debug mode, this prints visibly.
+    debugPrint('WARNING: Unknown pace value "$paceName" in database, '
+        'defaulting to intensive. This may indicate data from a newer app '
+        'version or a schema corruption.');
     return TravelPace.intensive;
   }
 }
