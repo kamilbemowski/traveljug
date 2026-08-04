@@ -451,8 +451,8 @@ Wire the Maps API key into GitHub Actions so `flutter build apk --debug` succeed
 
 #### Automated
 
-- [x] 2.1 `flutter test test/services/geo_utils_test.dart` — all Haversine + detour tests pass
-- [x] 2.2 `flutter analyze` passes
+- [x] 2.1 `flutter test test/services/geo_utils_test.dart` — all Haversine + detour tests pass — 51a4644
+- [x] 2.2 `flutter analyze` passes — 51a4644
 
 #### Manual
 
