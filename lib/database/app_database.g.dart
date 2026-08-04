@@ -701,6 +701,28 @@ class $AttractionsTable extends Attractions
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _latitudeMeta = const VerificationMeta(
+    'latitude',
+  );
+  @override
+  late final GeneratedColumn<double> latitude = GeneratedColumn<double>(
+    'latitude',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _longitudeMeta = const VerificationMeta(
+    'longitude',
+  );
+  @override
+  late final GeneratedColumn<double> longitude = GeneratedColumn<double>(
+    'longitude',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _tripIdMeta = const VerificationMeta('tripId');
   @override
   late final GeneratedColumn<int> tripId = GeneratedColumn<int>(
@@ -721,6 +743,8 @@ class $AttractionsTable extends Attractions
     durationMin,
     priority,
     position,
+    latitude,
+    longitude,
     tripId,
   ];
   @override
@@ -775,6 +799,18 @@ class $AttractionsTable extends Attractions
         position.isAcceptableOrUnknown(data['position']!, _positionMeta),
       );
     }
+    if (data.containsKey('latitude')) {
+      context.handle(
+        _latitudeMeta,
+        latitude.isAcceptableOrUnknown(data['latitude']!, _latitudeMeta),
+      );
+    }
+    if (data.containsKey('longitude')) {
+      context.handle(
+        _longitudeMeta,
+        longitude.isAcceptableOrUnknown(data['longitude']!, _longitudeMeta),
+      );
+    }
     if (data.containsKey('trip_id')) {
       context.handle(
         _tripIdMeta,
@@ -816,6 +852,14 @@ class $AttractionsTable extends Attractions
         DriftSqlType.int,
         data['${effectivePrefix}position'],
       )!,
+      latitude: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}latitude'],
+      ),
+      longitude: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}longitude'],
+      ),
       tripId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}trip_id'],
@@ -846,6 +890,12 @@ class Attraction extends DataClass implements Insertable<Attraction> {
   /// Ordering within a trip per FR-004.
   final int position;
 
+  /// GPS latitude, nullable per S-06. REAL (IEEE 754 double) in SQLite.
+  final double? latitude;
+
+  /// GPS longitude, nullable per S-06. REAL (IEEE 754 double) in SQLite.
+  final double? longitude;
+
   /// Foreign key to [Trips] — cascade delete when trip is removed.
   final int tripId;
   const Attraction({
@@ -855,6 +905,8 @@ class Attraction extends DataClass implements Insertable<Attraction> {
     required this.durationMin,
     required this.priority,
     required this.position,
+    this.latitude,
+    this.longitude,
     required this.tripId,
   });
   @override
@@ -866,6 +918,12 @@ class Attraction extends DataClass implements Insertable<Attraction> {
     map['duration_min'] = Variable<int>(durationMin);
     map['priority'] = Variable<int>(priority);
     map['position'] = Variable<int>(position);
+    if (!nullToAbsent || latitude != null) {
+      map['latitude'] = Variable<double>(latitude);
+    }
+    if (!nullToAbsent || longitude != null) {
+      map['longitude'] = Variable<double>(longitude);
+    }
     map['trip_id'] = Variable<int>(tripId);
     return map;
   }
@@ -878,6 +936,12 @@ class Attraction extends DataClass implements Insertable<Attraction> {
       durationMin: Value(durationMin),
       priority: Value(priority),
       position: Value(position),
+      latitude: latitude == null && nullToAbsent
+          ? const Value.absent()
+          : Value(latitude),
+      longitude: longitude == null && nullToAbsent
+          ? const Value.absent()
+          : Value(longitude),
       tripId: Value(tripId),
     );
   }
@@ -894,6 +958,8 @@ class Attraction extends DataClass implements Insertable<Attraction> {
       durationMin: serializer.fromJson<int>(json['durationMin']),
       priority: serializer.fromJson<int>(json['priority']),
       position: serializer.fromJson<int>(json['position']),
+      latitude: serializer.fromJson<double?>(json['latitude']),
+      longitude: serializer.fromJson<double?>(json['longitude']),
       tripId: serializer.fromJson<int>(json['tripId']),
     );
   }
@@ -907,6 +973,8 @@ class Attraction extends DataClass implements Insertable<Attraction> {
       'durationMin': serializer.toJson<int>(durationMin),
       'priority': serializer.toJson<int>(priority),
       'position': serializer.toJson<int>(position),
+      'latitude': serializer.toJson<double?>(latitude),
+      'longitude': serializer.toJson<double?>(longitude),
       'tripId': serializer.toJson<int>(tripId),
     };
   }
@@ -918,6 +986,8 @@ class Attraction extends DataClass implements Insertable<Attraction> {
     int? durationMin,
     int? priority,
     int? position,
+    Value<double?> latitude = const Value.absent(),
+    Value<double?> longitude = const Value.absent(),
     int? tripId,
   }) => Attraction(
     id: id ?? this.id,
@@ -926,6 +996,8 @@ class Attraction extends DataClass implements Insertable<Attraction> {
     durationMin: durationMin ?? this.durationMin,
     priority: priority ?? this.priority,
     position: position ?? this.position,
+    latitude: latitude.present ? latitude.value : this.latitude,
+    longitude: longitude.present ? longitude.value : this.longitude,
     tripId: tripId ?? this.tripId,
   );
   Attraction copyWithCompanion(AttractionsCompanion data) {
@@ -938,6 +1010,8 @@ class Attraction extends DataClass implements Insertable<Attraction> {
           : this.durationMin,
       priority: data.priority.present ? data.priority.value : this.priority,
       position: data.position.present ? data.position.value : this.position,
+      latitude: data.latitude.present ? data.latitude.value : this.latitude,
+      longitude: data.longitude.present ? data.longitude.value : this.longitude,
       tripId: data.tripId.present ? data.tripId.value : this.tripId,
     );
   }
@@ -951,14 +1025,25 @@ class Attraction extends DataClass implements Insertable<Attraction> {
           ..write('durationMin: $durationMin, ')
           ..write('priority: $priority, ')
           ..write('position: $position, ')
+          ..write('latitude: $latitude, ')
+          ..write('longitude: $longitude, ')
           ..write('tripId: $tripId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, category, durationMin, priority, position, tripId);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    category,
+    durationMin,
+    priority,
+    position,
+    latitude,
+    longitude,
+    tripId,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -969,6 +1054,8 @@ class Attraction extends DataClass implements Insertable<Attraction> {
           other.durationMin == this.durationMin &&
           other.priority == this.priority &&
           other.position == this.position &&
+          other.latitude == this.latitude &&
+          other.longitude == this.longitude &&
           other.tripId == this.tripId);
 }
 
@@ -979,6 +1066,8 @@ class AttractionsCompanion extends UpdateCompanion<Attraction> {
   final Value<int> durationMin;
   final Value<int> priority;
   final Value<int> position;
+  final Value<double?> latitude;
+  final Value<double?> longitude;
   final Value<int> tripId;
   const AttractionsCompanion({
     this.id = const Value.absent(),
@@ -987,6 +1076,8 @@ class AttractionsCompanion extends UpdateCompanion<Attraction> {
     this.durationMin = const Value.absent(),
     this.priority = const Value.absent(),
     this.position = const Value.absent(),
+    this.latitude = const Value.absent(),
+    this.longitude = const Value.absent(),
     this.tripId = const Value.absent(),
   });
   AttractionsCompanion.insert({
@@ -996,6 +1087,8 @@ class AttractionsCompanion extends UpdateCompanion<Attraction> {
     required int durationMin,
     this.priority = const Value.absent(),
     this.position = const Value.absent(),
+    this.latitude = const Value.absent(),
+    this.longitude = const Value.absent(),
     required int tripId,
   }) : name = Value(name),
        durationMin = Value(durationMin),
@@ -1007,6 +1100,8 @@ class AttractionsCompanion extends UpdateCompanion<Attraction> {
     Expression<int>? durationMin,
     Expression<int>? priority,
     Expression<int>? position,
+    Expression<double>? latitude,
+    Expression<double>? longitude,
     Expression<int>? tripId,
   }) {
     return RawValuesInsertable({
@@ -1016,6 +1111,8 @@ class AttractionsCompanion extends UpdateCompanion<Attraction> {
       if (durationMin != null) 'duration_min': durationMin,
       if (priority != null) 'priority': priority,
       if (position != null) 'position': position,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
       if (tripId != null) 'trip_id': tripId,
     });
   }
@@ -1027,6 +1124,8 @@ class AttractionsCompanion extends UpdateCompanion<Attraction> {
     Value<int>? durationMin,
     Value<int>? priority,
     Value<int>? position,
+    Value<double?>? latitude,
+    Value<double?>? longitude,
     Value<int>? tripId,
   }) {
     return AttractionsCompanion(
@@ -1036,6 +1135,8 @@ class AttractionsCompanion extends UpdateCompanion<Attraction> {
       durationMin: durationMin ?? this.durationMin,
       priority: priority ?? this.priority,
       position: position ?? this.position,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       tripId: tripId ?? this.tripId,
     );
   }
@@ -1061,6 +1162,12 @@ class AttractionsCompanion extends UpdateCompanion<Attraction> {
     if (position.present) {
       map['position'] = Variable<int>(position.value);
     }
+    if (latitude.present) {
+      map['latitude'] = Variable<double>(latitude.value);
+    }
+    if (longitude.present) {
+      map['longitude'] = Variable<double>(longitude.value);
+    }
     if (tripId.present) {
       map['trip_id'] = Variable<int>(tripId.value);
     }
@@ -1076,6 +1183,8 @@ class AttractionsCompanion extends UpdateCompanion<Attraction> {
           ..write('durationMin: $durationMin, ')
           ..write('priority: $priority, ')
           ..write('position: $position, ')
+          ..write('latitude: $latitude, ')
+          ..write('longitude: $longitude, ')
           ..write('tripId: $tripId')
           ..write(')'))
         .toString();
@@ -1798,6 +1907,8 @@ typedef $$AttractionsTableCreateCompanionBuilder =
       required int durationMin,
       Value<int> priority,
       Value<int> position,
+      Value<double?> latitude,
+      Value<double?> longitude,
       required int tripId,
     });
 typedef $$AttractionsTableUpdateCompanionBuilder =
@@ -1808,6 +1919,8 @@ typedef $$AttractionsTableUpdateCompanionBuilder =
       Value<int> durationMin,
       Value<int> priority,
       Value<int> position,
+      Value<double?> latitude,
+      Value<double?> longitude,
       Value<int> tripId,
     });
 
@@ -1890,6 +2003,16 @@ class $$AttractionsTableFilterComposer
 
   ColumnFilters<int> get position => $composableBuilder(
     column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get latitude => $composableBuilder(
+    column: $table.latitude,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get longitude => $composableBuilder(
+    column: $table.longitude,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1981,6 +2104,16 @@ class $$AttractionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get latitude => $composableBuilder(
+    column: $table.latitude,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get longitude => $composableBuilder(
+    column: $table.longitude,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$TripsTableOrderingComposer get tripId {
     final $$TripsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2033,6 +2166,12 @@ class $$AttractionsTableAnnotationComposer
 
   GeneratedColumn<int> get position =>
       $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<double> get latitude =>
+      $composableBuilder(column: $table.latitude, builder: (column) => column);
+
+  GeneratedColumn<double> get longitude =>
+      $composableBuilder(column: $table.longitude, builder: (column) => column);
 
   $$TripsTableAnnotationComposer get tripId {
     final $$TripsTableAnnotationComposer composer = $composerBuilder(
@@ -2118,6 +2257,8 @@ class $$AttractionsTableTableManager
                 Value<int> durationMin = const Value.absent(),
                 Value<int> priority = const Value.absent(),
                 Value<int> position = const Value.absent(),
+                Value<double?> latitude = const Value.absent(),
+                Value<double?> longitude = const Value.absent(),
                 Value<int> tripId = const Value.absent(),
               }) => AttractionsCompanion(
                 id: id,
@@ -2126,6 +2267,8 @@ class $$AttractionsTableTableManager
                 durationMin: durationMin,
                 priority: priority,
                 position: position,
+                latitude: latitude,
+                longitude: longitude,
                 tripId: tripId,
               ),
           createCompanionCallback:
@@ -2136,6 +2279,8 @@ class $$AttractionsTableTableManager
                 required int durationMin,
                 Value<int> priority = const Value.absent(),
                 Value<int> position = const Value.absent(),
+                Value<double?> latitude = const Value.absent(),
+                Value<double?> longitude = const Value.absent(),
                 required int tripId,
               }) => AttractionsCompanion.insert(
                 id: id,
@@ -2144,6 +2289,8 @@ class $$AttractionsTableTableManager
                 durationMin: durationMin,
                 priority: priority,
                 position: position,
+                latitude: latitude,
+                longitude: longitude,
                 tripId: tripId,
               ),
           withReferenceMapper: (p0) => p0

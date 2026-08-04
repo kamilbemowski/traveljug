@@ -438,14 +438,14 @@ Wire the Maps API key into GitHub Actions so `flutter build apk --debug` succeed
 
 #### Automated
 
-- [ ] 1.1 `dart run build_runner build` succeeds
-- [ ] 1.2 `flutter analyze` passes
-- [ ] 1.3 `flutter test` — all 48 existing tests pass
+- [x] 1.1 `dart run build_runner build` succeeds
+- [x] 1.2 `flutter analyze` passes
+- [x] 1.3 `flutter test` — all 48 existing tests pass
 
 #### Manual
 
-- [ ] 1.4 `Attractions` table has `latitude` / `longitude` RealColumns
-- [ ] 1.5 `schemaVersion = 4` in `app_database.dart`
+- [x] 1.4 `Attractions` table has `latitude` / `longitude` RealColumns
+- [x] 1.5 `schemaVersion = 4` in `app_database.dart`
 
 ### Phase 2: Geo computation — Haversine + detour factor
 

@@ -70,6 +70,12 @@ class Attractions extends Table {
   IntColumn get position =>
       integer().withDefault(const Constant(0))();
 
+  /// GPS latitude, nullable per S-06. REAL (IEEE 754 double) in SQLite.
+  RealColumn get latitude => real().nullable()();
+
+  /// GPS longitude, nullable per S-06. REAL (IEEE 754 double) in SQLite.
+  RealColumn get longitude => real().nullable()();
+
   /// Foreign key to [Trips] — cascade delete when trip is removed.
   IntColumn get tripId => integer().references(
         Trips,
