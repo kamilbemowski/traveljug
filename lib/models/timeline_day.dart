@@ -54,8 +54,8 @@ class TimelineDay {
   final bool overstuffed;
 
   /// True when the day is at 80%+ capacity but not yet overstuffed.
-  /// Deprecated by S-05 — UI reads [intensity] instead.
-  final bool tightSchedule;
+  /// Derives from [intensity] — single source of truth for the 0.8 threshold.
+  bool get tightSchedule => intensity == DayIntensity.high && !overstuffed;
 
   /// Computed intensity level based on totalMin / budget ratio.
   final DayIntensity intensity;
@@ -65,7 +65,6 @@ class TimelineDay {
     required this.slots,
     required this.totalMin,
     required this.overstuffed,
-    required this.tightSchedule,
     required this.intensity,
   });
 }

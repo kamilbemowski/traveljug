@@ -196,6 +196,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
             itemCount: _timeline.length,
             itemBuilder: (context, index) {
               return _DaySection(
+                key: ValueKey(_timeline[index].date),
                 day: _timeline[index],
                 dayIndex: index,
                 dayNumber: index + 1,
@@ -237,6 +238,7 @@ class _DaySection extends StatefulWidget {
   final void Function(int slotIndex) onDelete;
 
   const _DaySection({
+    super.key,
     required this.day,
     required this.dayIndex,
     required this.dayNumber,
@@ -288,7 +290,7 @@ class _DaySectionState extends State<_DaySection> {
                 ),
                 IconButton(
                   icon: Icon(_keepTogether ? Icons.lock : Icons.lock_open, size: 20),
-                  tooltip: _keepTogether ? 'Keep Together (locked)' : 'Auto-split',
+                  tooltip: _keepTogether ? 'Warning hidden' : 'Show warning',
                   onPressed: () => setState(() => _keepTogether = !_keepTogether),
                   visualDensity: VisualDensity.compact,
                 ),
@@ -318,7 +320,7 @@ class _DaySectionState extends State<_DaySection> {
                 children: [
                   Icon(Icons.lock, color: Colors.blue, size: 18),
                   SizedBox(width: 8),
-                  Expanded(child: Text('Keeping all attractions together', style: TextStyle(color: Colors.blue, fontSize: 13))),
+                  Expanded(child: Text('Overstuffing warning hidden', style: TextStyle(color: Colors.blue, fontSize: 13))),
                 ],
               ),
             ),
