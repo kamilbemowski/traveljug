@@ -18,6 +18,7 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
   TravelPace _pace = TravelPace.intensive;
+  TravelContext? _travelContext;
 
   @override
   void dispose() {
@@ -61,6 +62,7 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
       startDate: _startDate,
       endDate: _endDate,
       pace: _pace,
+      travelContext: _travelContext,
     );
 
     if (!mounted) return;
@@ -128,6 +130,26 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                 onChanged: (v) {
                   if (v != null) setState(() => _pace = v);
                 },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<TravelContext?>(
+                initialValue: _travelContext,
+                decoration: const InputDecoration(labelText: 'Travel context'),
+                items: const [
+                  DropdownMenuItem(
+                    value: null,
+                    child: Text('Default (30 min)'),
+                  ),
+                  DropdownMenuItem(
+                    value: TravelContext.city,
+                    child: Text('City tour (20 min)'),
+                  ),
+                  DropdownMenuItem(
+                    value: TravelContext.roadTrip,
+                    child: Text('Road trip (90 min)'),
+                  ),
+                ],
+                onChanged: (v) => setState(() => _travelContext = v),
               ),
               const SizedBox(height: 24),
               ElevatedButton(

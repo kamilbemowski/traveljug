@@ -239,8 +239,8 @@ Add a "Travel context" dropdown to `CreateTripScreen` next to the "Pace" dropdow
 
 #### Automated
 
-- [ ] 3.1 `flutter analyze` passes
-- [ ] 3.2 `flutter build apk --debug` compiles
+- [x] 3.1 `flutter analyze` passes
+- [x] 3.2 `flutter build apk --debug` compiles
 
 #### Manual
 
