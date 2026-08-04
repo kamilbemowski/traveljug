@@ -186,8 +186,8 @@ Add a "Keep Together" toggle per day (lock icon 🔒/🔓). When active, the day
 
 #### Automated
 
-- [x] 1.1 `flutter test` — all tests pass with intensity assertions
-- [x] 1.2 `flutter analyze` passes
+- [x] 1.1 `flutter test` — all tests pass with intensity assertions — a30f7b2
+- [x] 1.2 `flutter analyze` passes — a30f7b2
 
 #### Manual
 
