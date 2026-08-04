@@ -15,8 +15,8 @@ Replace the flat travel-time default with real distances between consecutive att
 
 ### Key Discoveries:
 
-- `lib/services/timeline_service.dart:37` — `travelCost = isFirstInDay ? 0 : effectiveTravel` — the single line where per-pair distance replaces the flat constant
-- `lib/services/timeline_service.dart:147-148` — `reapplyOverrides()` also recomputes travel gaps flat — must also be updated
+- `lib/services/timeline_service.dart:37` — `travelCost = isFirstInDay ? 0 : effectiveTravel` — the main consumption site (also lines 45 and 73 for `travelFromPrevMin`); all three replaced in Phase 3
+- `lib/services/timeline_service.dart:153` — `reapplyOverrides()` also recomputes travel gaps flat at line 153 (`(baseTravel * config.travelMultiplier).round()`) — must also be updated
 - `lib/database/tables.dart:42-79` — `Attractions` table, two new `real().nullable()` columns needed
 - `lib/database/app_database.dart:13` — `schemaVersion = 3`, bump to 4 with `m.addColumn` migration
 - Existing CI pattern for secrets: `GOOGLE_SERVICES_JSON` base64-decoded in `pr-check.yml:23-27`
@@ -86,7 +86,7 @@ Add nullable `latitude` / `longitude` `RealColumn`s to `Attractions`, bump schem
 **Intent**: Accept optional `double? latitude, longitude` params. Follow existing optional-param pattern (`Value(latitude)`, `Value.absentIfNull(latitude)`).
 
 **Contract**:
-- `createAttraction()`: add `double? latitude, double? longitude` params, pass via `Value(latitude)` / `Value(longitude)` in `TripsCompanion.insert()`
+- `createAttraction()`: add `double? latitude, double? longitude` params, pass via `Value(latitude)` / `Value(longitude)` in `AttractionsCompanion.insert()`
 - `updateAttraction()`: add `double? latitude, double? longitude` params, pass via `Value.absentIfNull(latitude)` / `Value.absentIfNull(longitude)`
 
 #### 4. Regenerate drift code
@@ -216,7 +216,7 @@ static int pairTravelMinutes(
 
 **Contract**:
 - Before loop: `final speedKmh = speedKmhForContext(parseTravelContext(trip.travelContext));` and `var previousAttr = attractions.first;`
-- Replace `final travelCost = isFirstInDay ? 0 : effectiveTravel;` with `final travelCost = pairTravelMinutes(isFirstInDay ? null : previousAttr, attr, speedKmh: speedKmh, fallbackMinutes: flatTravel, multiplier: config.travelMultiplier);`
+- Replace `final travelCost = isFirstInDay ? 0 : effectiveTravel;` with `final travelCost = pairTravelMinutes(isFirstInDay ? null : previousAttr, attr, speedKmh: speedKmh, fallbackMinutes: effectiveTravel, multiplier: config.travelMultiplier);`
 - Replace `travelFromPrevMin: isFirstInDay ? null : effectiveTravel` with `travelFromPrevMin: isFirstInDay ? null : travelCost` (at both construction sites)
 - End of loop: `previousAttr = attr;`
 
