@@ -25,6 +25,9 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // S-06: Google Maps API key from local.properties (local dev) or CI env var.
+        manifestPlaceholders["MAPS_API_KEY"] =
+            project.findProperty("MAPS_API_KEY") as String? ?: ""
         // firebase_app_distribution has production/staging flavors; pick production.
         missingDimensionStrategy("default", "production")
     }

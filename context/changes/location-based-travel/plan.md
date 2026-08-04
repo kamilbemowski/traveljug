@@ -470,8 +470,8 @@ Wire the Maps API key into GitHub Actions so `flutter build apk --debug` succeed
 
 #### Automated
 
-- [ ] 4.1 `flutter analyze` passes
-- [ ] 4.2 `flutter build apk --debug` compiles
+- [x] 4.1 `flutter analyze` passes
+- [x] 4.2 `flutter build apk --debug` compiles
 
 #### Manual
 
