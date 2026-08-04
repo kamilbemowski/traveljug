@@ -251,16 +251,26 @@ class _DaySection extends StatelessWidget {
     final hours = day.totalMin ~/ 60;
     final mins = day.totalMin % 60;
 
+    final intensityColor = switch (day.intensity) {
+      DayIntensity.low => Colors.green,
+      DayIntensity.medium => Colors.amber,
+      DayIntensity.high => Colors.orange,
+    };
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Intensity bar (S-05)
+          Container(height: 4, color: intensityColor),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: day.overstuffed ? Colors.red.shade50 : Colors.blue.shade50,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius: day.overstuffed
+                  ? BorderRadius.zero
+                  : const BorderRadius.vertical(top: Radius.circular(12)),
             ),
             child: Row(
               children: [
@@ -281,19 +291,6 @@ class _DaySection extends StatelessWidget {
                   Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
                   SizedBox(width: 8),
                   Expanded(child: Text('This day is overstuffed', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500))),
-                ],
-              ),
-            ),
-          if (day.tightSchedule && !day.overstuffed)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              color: Colors.orange.shade50,
-              child: const Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.orange, size: 18),
-                  SizedBox(width: 8),
-                  Expanded(child: Text('Tight schedule', style: TextStyle(color: Colors.orange, fontSize: 13))),
                 ],
               ),
             ),

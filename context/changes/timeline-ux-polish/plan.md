@@ -186,13 +186,13 @@ Add a "Keep Together" toggle per day (lock icon 🔒/🔓). When active, the day
 
 #### Automated
 
-- [ ] 1.1 `flutter test` — all tests pass with intensity assertions
-- [ ] 1.2 `flutter analyze` passes
+- [x] 1.1 `flutter test` — all tests pass with intensity assertions
+- [x] 1.2 `flutter analyze` passes
 
 #### Manual
 
-- [ ] 1.3 Day cards show colored bar (green/amber/orange) matching intensity
-- [ ] 1.4 "Tight schedule" text banner replaced by bar
+- [x] 1.3 Day cards show colored bar (green/amber/orange) matching intensity
+- [x] 1.4 "Tight schedule" text banner replaced by bar
 
 ### Phase 2: Force-overstuff toggle
 

@@ -53,6 +53,7 @@ class TimelineService {
           totalMin: currentTotal,
           overstuffed: false,
           tightSchedule: currentTotal >= dailyBudget * 0.8,
+          intensity: computeIntensity(currentTotal, dailyBudget),
         ));
         dayIndex++;
         currentSlots = [];
@@ -85,6 +86,7 @@ class TimelineService {
         totalMin: currentTotal,
         overstuffed: overstuffed,
         tightSchedule: !overstuffed && currentTotal >= dailyBudget * 0.8,
+        intensity: computeIntensity(currentTotal, dailyBudget),
       ));
     }
 
@@ -173,6 +175,7 @@ class TimelineService {
         totalMin: total,
         overstuffed: overstuffed,
         tightSchedule: !overstuffed && total >= dailyBudget * 0.8,
+        intensity: computeIntensity(total, dailyBudget),
       ));
     }
 
