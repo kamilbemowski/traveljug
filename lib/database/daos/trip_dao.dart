@@ -16,6 +16,7 @@ class TripDao extends DatabaseAccessor<AppDatabase> with _$TripDaoMixin {
     DateTime? startDate,
     DateTime? endDate,
     TravelPace pace = TravelPace.intensive,
+    TravelContext? travelContext,
     String? imageUrl,
   }) {
     return into(db.trips).insert(TripsCompanion.insert(
@@ -24,6 +25,7 @@ class TripDao extends DatabaseAccessor<AppDatabase> with _$TripDaoMixin {
           startDate: Value(startDate),
           endDate: Value(endDate),
           pace: Value(pace.name),
+          travelContext: Value(travelContext?.name),
           imageUrl: Value(imageUrl),
         ));
   }
@@ -49,6 +51,7 @@ class TripDao extends DatabaseAccessor<AppDatabase> with _$TripDaoMixin {
     DateTime? startDate,
     DateTime? endDate,
     TravelPace? pace,
+    TravelContext? travelContext,
     String? imageUrl,
   }) async {
     final rows = await (update(db.trips)..where((t) => t.id.equals(id))).write(
@@ -58,6 +61,7 @@ class TripDao extends DatabaseAccessor<AppDatabase> with _$TripDaoMixin {
             startDate: Value.absentIfNull(startDate),
             endDate: Value.absentIfNull(endDate),
             pace: Value.absentIfNull(pace?.name),
+            travelContext: Value.absentIfNull(travelContext?.name),
             imageUrl: Value.absentIfNull(imageUrl),
             updatedAt: Value(DateTime.now()),
           ),

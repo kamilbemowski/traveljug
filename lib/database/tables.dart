@@ -16,6 +16,13 @@ enum TravelPace {
   relaxing,
 }
 
+/// Travel context — sets the base travel time between attractions (S-04).
+/// Stored as text in SQLite. Null means "use default" (30 min).
+enum TravelContext {
+  city,
+  roadTrip,
+}
+
 /// Trips table — one row per planned trip.
 class Trips extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -29,6 +36,9 @@ class Trips extends Table {
   /// Stored as [TravelPace.name], default `intensive`.
   TextColumn get pace =>
       text().withDefault(const Constant('intensive'))();
+
+  /// Stored as [TravelContext.name]. Null = use default (30 min).
+  TextColumn get travelContext => text().nullable()();
 
   DateTimeColumn get createdAt =>
       dateTime().withDefault(currentDateAndTime)();

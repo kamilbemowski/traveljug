@@ -215,14 +215,14 @@ Add a "Travel context" dropdown to `CreateTripScreen` next to the "Pace" dropdow
 
 #### Automated
 
-- [ ] 1.1 `dart run build_runner build` succeeds
-- [ ] 1.2 `flutter analyze` passes
-- [ ] 1.3 `flutter test` — existing tests pass (backward compat)
+- [x] 1.1 `dart run build_runner build` succeeds
+- [x] 1.2 `flutter analyze` passes
+- [x] 1.3 `flutter test` — existing tests pass (backward compat)
 
 #### Manual
 
-- [ ] 1.4 `TravelContext` enum in `tables.dart`
-- [ ] 1.5 `schemaVersion = 3` in `app_database.dart`
+- [x] 1.4 `TravelContext` enum in `tables.dart`
+- [x] 1.5 `schemaVersion = 3` in `app_database.dart`
 
 ### Phase 2: Use travel context in TimelineService
 
