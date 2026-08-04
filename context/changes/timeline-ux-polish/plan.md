@@ -198,10 +198,10 @@ Add a "Keep Together" toggle per day (lock icon 🔒/🔓). When active, the day
 
 #### Automated
 
-- [ ] 2.1 `flutter analyze` passes
-- [ ] 2.2 `flutter build apk --debug` compiles
+- [x] 2.1 `flutter analyze` passes
+- [x] 2.2 `flutter build apk --debug` compiles
 
 #### Manual
 
-- [ ] 2.3 Lock icon toggles Keep Together mode
-- [ ] 2.4 Overstuffing warning suppressed when locked
+- [x] 2.3 Lock icon toggles Keep Together mode
+- [x] 2.4 Overstuffing warning suppressed when locked

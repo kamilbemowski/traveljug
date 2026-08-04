@@ -225,8 +225,9 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   }
 }
 
-/// A single day section in the timeline — now interactive.
-class _DaySection extends StatelessWidget {
+/// A single day section in the timeline — interactive with intensity bar
+/// and Keep Together toggle (S-05).
+class _DaySection extends StatefulWidget {
   final TimelineDay day;
   final int dayIndex;
   final int dayNumber;
@@ -246,7 +247,15 @@ class _DaySection extends StatelessWidget {
   });
 
   @override
+  State<_DaySection> createState() => _DaySectionState();
+}
+
+class _DaySectionState extends State<_DaySection> {
+  bool _keepTogether = false;
+
+  @override
   Widget build(BuildContext context) {
+    final day = widget.day;
     final dateStr = '${day.date.day}.${day.date.month}.${day.date.year}';
     final hours = day.totalMin ~/ 60;
     final mins = day.totalMin % 60;
@@ -275,13 +284,19 @@ class _DaySection extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Text('Day $dayNumber — $dateStr', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  child: Text('Day ${widget.dayNumber} — $dateStr', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+                IconButton(
+                  icon: Icon(_keepTogether ? Icons.lock : Icons.lock_open, size: 20),
+                  tooltip: _keepTogether ? 'Keep Together (locked)' : 'Auto-split',
+                  onPressed: () => setState(() => _keepTogether = !_keepTogether),
+                  visualDensity: VisualDensity.compact,
                 ),
                 Text('${hours}h ${mins}m', style: TextStyle(color: day.overstuffed ? Colors.red : Colors.grey.shade700, fontWeight: FontWeight.w500)),
               ],
             ),
           ),
-          if (day.overstuffed)
+          if (day.overstuffed && !_keepTogether)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -294,22 +309,35 @@ class _DaySection extends StatelessWidget {
                 ],
               ),
             ),
+          if (day.overstuffed && _keepTogether)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: Colors.blue.shade50,
+              child: const Row(
+                children: [
+                  Icon(Icons.lock, color: Colors.blue, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('Keeping all attractions together', style: TextStyle(color: Colors.blue, fontSize: 13))),
+                ],
+              ),
+            ),
           ReorderableListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: day.slots.length,
-            onReorderItem: onReorder,
+            onReorderItem: widget.onReorder,
             proxyDecorator: (child, index, animation) => Material(elevation: 4, child: child),
             itemBuilder: (context, index) {
               final slot = day.slots[index];
               return _SlotTile(
                 key: ValueKey(slot.attraction.id),
                 slot: slot,
-                dayIndex: dayIndex,
+                dayIndex: widget.dayIndex,
                 slotIndex: index,
-                totalDays: totalDays,
-                onMoveDay: onMoveDay,
-                onDelete: onDelete,
+                totalDays: widget.totalDays,
+                onMoveDay: widget.onMoveDay,
+                onDelete: widget.onDelete,
               );
             },
           ),
