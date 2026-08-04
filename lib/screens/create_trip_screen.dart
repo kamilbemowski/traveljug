@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../database/app_database.dart';
 import '../database/daos/trip_dao.dart';
 import '../database/tables.dart';
+import '../services/pace_config.dart';
 
 class CreateTripScreen extends StatefulWidget {
   const CreateTripScreen({super.key});
@@ -54,16 +55,24 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final db = await getDatabase();
-    final tripDao = TripDao(db);
-    await tripDao.createTrip(
-      name: _nameController.text.trim(),
-      destination: _destinationController.text.trim(),
-      startDate: _startDate,
-      endDate: _endDate,
-      pace: _pace,
-      travelContext: _travelContext,
-    );
+    try {
+      final db = await getDatabase();
+      final tripDao = TripDao(db);
+      await tripDao.createTrip(
+        name: _nameController.text.trim(),
+        destination: _destinationController.text.trim(),
+        startDate: _startDate,
+        endDate: _endDate,
+        pace: _pace,
+        travelContext: _travelContext,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to create trip. Please try again.')),
+      );
+      return;
+    }
 
     if (!mounted) return;
     Navigator.pop(context, true);
@@ -135,19 +144,12 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
               DropdownButtonFormField<TravelContext?>(
                 initialValue: _travelContext,
                 decoration: const InputDecoration(labelText: 'Travel context'),
-                items: const [
-                  DropdownMenuItem(
-                    value: null,
-                    child: Text('Default (30 min)'),
-                  ),
-                  DropdownMenuItem(
-                    value: TravelContext.city,
-                    child: Text('City tour (20 min)'),
-                  ),
-                  DropdownMenuItem(
-                    value: TravelContext.roadTrip,
-                    child: Text('Road trip (90 min)'),
-                  ),
+                items: [
+                  for (final ctx in <TravelContext?>[null, TravelContext.city, TravelContext.roadTrip])
+                    DropdownMenuItem(
+                      value: ctx,
+                      child: Text(travelContextLabel(ctx)),
+                    ),
                 ],
                 onChanged: (v) => setState(() => _travelContext = v),
               ),

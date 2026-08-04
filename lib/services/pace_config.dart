@@ -12,8 +12,21 @@ TravelContext? parseTravelContext(String? contextName) {
   try {
     return TravelContext.values.byName(contextName);
   } on ArgumentError {
+    debugPrint('WARNING: Unknown travel context value "$contextName" in database, '
+        'defaulting to null (30 min default). This may indicate data from a '
+        'newer app version or a schema corruption.');
     return null;
   }
+}
+
+/// Human-readable label for a travel context, including its base minutes.
+String travelContextLabel(TravelContext? context) {
+  final name = switch (context) {
+    TravelContext.city => 'City tour',
+    TravelContext.roadTrip => 'Road trip',
+    null => 'Default',
+  };
+  return '$name (${travelMinutesForContext(context)} min)';
 }
 
 /// Returns the base travel minutes for a given [TravelContext].

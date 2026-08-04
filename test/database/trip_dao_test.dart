@@ -38,6 +38,29 @@ void main() {
       expect(trip.pace, TravelPace.intensive.name);
     });
 
+    test('travelContext roundtrip — null, city, roadTrip', () async {
+      // Null (default).
+      final id1 = await tripDao.createTrip(
+        name: 'Default', destination: 'X', travelContext: null,
+      );
+      final t1 = await tripDao.getTripById(id1);
+      expect(t1!.travelContext, isNull);
+
+      // City.
+      final id2 = await tripDao.createTrip(
+        name: 'City', destination: 'X', travelContext: TravelContext.city,
+      );
+      final t2 = await tripDao.getTripById(id2);
+      expect(t2!.travelContext, TravelContext.city.name);
+
+      // Road trip.
+      final id3 = await tripDao.createTrip(
+        name: 'Road', destination: 'X', travelContext: TravelContext.roadTrip,
+      );
+      final t3 = await tripDao.getTripById(id3);
+      expect(t3!.travelContext, TravelContext.roadTrip.name);
+    });
+
     test('list all — newest first', () async {
       final id1 = await tripDao.createTrip(name: 'A', destination: 'A');
       await Future.delayed(const Duration(seconds: 1));
