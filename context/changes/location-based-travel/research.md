@@ -260,10 +260,34 @@ I measured 26 European driving routes on OSRM (live data, 2026-08-04) and cross-
 
 ---
 
-## Open Questions (updated)
+## Final Decisions (2026-08-04)
 
-1. **Prędkość piesza** — 5 km/h × detour factor 1.6 = efektywne ~3.1 km/h. OK dla MVP?
-2. **Format współrzędnych** — decimal degrees tylko, czy też DMS?
-3. **Hint dla ujemnych współrzędnych** — dodać podpowiedź "południe/zachód = wartość ujemna"?
-4. **Road trip speed** — podnieść 60 → 75 km/h przy detour factor? Czy zostawić 60 + factor (over-estimate)?
-5. **Czy detour factor approach (Haversine × bracket) jest zaakceptowany jako decyzja dla S-06?**
+All open questions resolved. S-06 spec locked:
+
+| # | Decision | Rationale |
+|---|---|---|
+| **1** | Walking speed: 5 km/h × detour 1.6 = effective ~3.1 km/h. Accepted. | Realistic city walking pace with stops. 5-min buffer floor handles sub-km noise. |
+| **2** | Coordinate input: **Google Maps Flutter map picker.** User taps on embedded map → coordinates auto-populate. Manual text fields as fallback behind "Add location (optional)" toggle. | $0 cost (Maps SDK unlimited free since March 2025). Better UX than manual entry. API key configured in AndroidManifest.xml. No geocoding — picker is tap-only for MVP. |
+| **3** | Hints: **No longer needed** — map picker fills coordinates automatically. Manual fallback fields retain basic labels (Latitude / Longitude). The map itself is the UX. | Picker UI makes hints redundant. |
+| **4** | Road trip speed: **75 km/h base + distance-bracket detour factor.** Factors: <10 km ×1.6, 10-50 km ×1.35, 50-200 km ×1.2, >200 km ×1.15. Effective speeds: 47→56→63→65 km/h as distance increases. | Matches real-world driving: short=local roads/lower effective speed, long=motorways/higher effective speed. |
+| **5** | Detour factor approach accepted. No routing API for MVP. `pairTravelMinutes()` choke point makes future API swap cheap (ORS or Mapbox). | Offline-first NFR preserved. Routing API deferred to post-MVP. |
+
+### S-06 final spec summary
+
+| Layer | Implementation |
+|---|---|
+| **Coordinates** | Google Maps Flutter map picker (tap → lat/lon). `google_maps_flutter` package, Maps SDK key in AndroidManifest. |
+| **Distance** | Haversine formula in `lib/services/geo_utils.dart` (pure `dart:math`, zero deps) |
+| **Detour** | `pairTravelMinutes()` applies distance-bracket factor before speed conversion |
+| **Road trip speed** | 75 km/h base × detour factor — effective 47–65 km/h depending on distance |
+| **City/walking speed** | 5 km/h × 1.6 detour = effective ~3.1 km/h |
+| **Buffer floor** | 5 min minimum between stops with coordinates (pre-multiplier) |
+| **Fallback** | Missing coordinates → S-04 flat default (travelMinutesForContext) |
+| **Schema** | `Attractions.latitude` / `longitude` — `real().nullable()`, migration v3→v4 |
+| **UI** | Map picker in `_AddAttractionDialog` behind "Add location (optional)" toggle |
+| **Timeline** | Per-pair in `computeTimeline()` + `reapplyOverrides()` |
+
+### New dependencies
+
+- `google_maps_flutter` — official Flutter Maps SDK (display only, $0)
+- Google Cloud project with Maps SDK enabled (API key in `AndroidManifest.xml`)
