@@ -65,10 +65,12 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     final overrideDao = TimelineOverrideDao(db);
     final overrides = await overrideDao.loadOverridesByTrip(widget.trip.id);
     final baseTravel = travelMinutesForContext(parseTravelContext(trip.travelContext));
+    final speedKmh = speedKmhForContext(parseTravelContext(trip.travelContext));
     final timeline = TimelineService.reapplyOverrides(
       computed, overrides,
       pace: trip.pace,
       baseTravel: baseTravel,
+      speedKmh: speedKmh,
     );
 
     setState(() { _trip = trip; _timeline = timeline; _error = null; _loading = false; });

@@ -463,8 +463,8 @@ Wire the Maps API key into GitHub Actions so `flutter build apk --debug` succeed
 
 #### Automated
 
-- [ ] 3.1 `flutter test` — all timeline tests pass (new + existing)
-- [ ] 3.2 `flutter analyze` passes
+- [x] 3.1 `flutter test` — all timeline tests pass (new + existing)
+- [x] 3.2 `flutter analyze` passes
 
 ### Phase 4: Map picker UI
 

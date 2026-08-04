@@ -33,6 +33,8 @@ Attraction _attr({
   int priority = 1,
   int position = 0,
   int tripId = 1,
+  double? latitude,
+  double? longitude,
 }) {
   return Attraction(
     id: id ?? 1,
@@ -42,6 +44,8 @@ Attraction _attr({
     priority: priority,
     position: position,
     tripId: tripId,
+    latitude: latitude,
+    longitude: longitude,
   );
 }
 
@@ -390,6 +394,67 @@ void main() {
       );
       expect(result[0].intensity, DayIntensity.high);
       expect(result[0].tightSchedule, isTrue);
+    });
+
+    // ── S-06: Coordinate-based travel time ──
+
+    test('two attractions with coordinates use distance-based travel', () {
+      final trip = _trip(startDate: today, endDate: today);
+      // Paris→London ≈ 343 km × 1.15 (>200 bracket) ≈ 395 km / 75 × 60 ≈ 316 min × 0.7 = 221
+      final result = TimelineService.computeTimeline(trip, [
+        _attr(durationMin: 60, latitude: 48.8566, longitude: 2.3522, position: 0),
+        _attr(durationMin: 60, latitude: 51.5074, longitude: -0.1278, position: 1),
+      ]);
+      expect(result[0].slots[1].travelFromPrevMin, isNotNull);
+      expect(result[0].slots[1].travelFromPrevMin!, greaterThan(200));
+    });
+
+    test('missing coords fall back to flat default', () {
+      final trip = _trip(startDate: today, endDate: today);
+      final result = TimelineService.computeTimeline(trip, [
+        _attr(durationMin: 60, position: 0), // no coords
+        _attr(durationMin: 60, position: 1), // no coords
+      ]);
+      // 30 × 0.7 = 21 min (flat default for intensive)
+      expect(result[0].slots[1].travelFromPrevMin, 21);
+    });
+
+    test('mixed coords — one missing, one present → flat fallback', () {
+      final trip = _trip(startDate: today, endDate: today);
+      final result = TimelineService.computeTimeline(trip, [
+        _attr(durationMin: 60, latitude: 48.8566, longitude: 2.3522, position: 0),
+        _attr(durationMin: 60, position: 1), // no coords — fallback
+      ]);
+      expect(result[0].slots[1].travelFromPrevMin, 21);
+    });
+
+    test('same coordinates → buffer floor (5 min × multiplier)', () {
+      final trip = _trip(startDate: today, endDate: today);
+      final result = TimelineService.computeTimeline(trip, [
+        _attr(durationMin: 60, latitude: 48.8566, longitude: 2.3522, position: 0),
+        _attr(durationMin: 60, latitude: 48.8566, longitude: 2.3522, position: 1),
+      ]);
+      // Same coords → 0 km → kMinPairTravelMin(5) × 0.7 = 4 min
+      expect(result[0].slots[1].travelFromPrevMin, 4);
+    });
+
+    test('invalid coords fall back to flat default', () {
+      final trip = _trip(startDate: today, endDate: today);
+      final result = TimelineService.computeTimeline(trip, [
+        _attr(durationMin: 60, position: 0),
+        _attr(durationMin: 60, latitude: 95.0, longitude: 0.0, position: 1),
+      ]);
+      expect(result[0].slots[1].travelFromPrevMin, 21);
+    });
+
+    test('day boundary — first slot on new day has null travel gap', () {
+      final trip = _trip(startDate: today, endDate: today.add(const Duration(days: 1)));
+      final result = TimelineService.computeTimeline(trip, [
+        _attr(id: 1, durationMin: 800, latitude: 48.85, longitude: 2.35, position: 0),
+        _attr(id: 2, durationMin: 60, latitude: 51.50, longitude: -0.12, position: 1),
+      ]);
+      // Attr 1 fills day 0. Attr 2 starts day 1 → no travel gap.
+      expect(result[1].slots[0].travelFromPrevMin, isNull);
     });
   });
 
