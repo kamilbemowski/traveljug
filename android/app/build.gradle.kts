@@ -26,15 +26,16 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         // S-06: Google Maps API key from local.properties (local dev) or GH Secrets (CI).
-        val localProperties = java.util.Properties()
         val localFile = rootProject.file("local.properties")
-        if (localFile.exists()) {
-            localFile.inputStream().use { localProperties.load(it) }
-        }
-        manifestPlaceholders["MAPS_API_KEY"] =
-            localProperties.getProperty("MAPS_API_KEY")
-                ?: System.getenv("MAPS_API_KEY")
-                ?: ""
+        val mapsKey = if (localFile.exists()) {
+            localFile.readLines()
+                .firstOrNull { it.startsWith("MAPS_API_KEY=") }
+                ?.substringAfter("MAPS_API_KEY=")
+                ?.trim()
+        } else null
+        manifestPlaceholders["MAPS_API_KEY"] = mapsKey
+            ?: System.getenv("MAPS_API_KEY")
+            ?: ""
         // firebase_app_distribution has production/staging flavors; pick production.
         missingDimensionStrategy("default", "production")
     }
