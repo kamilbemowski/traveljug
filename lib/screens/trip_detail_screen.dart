@@ -196,6 +196,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
             itemCount: _timeline.length,
             itemBuilder: (context, index) {
               return _DaySection(
+                key: ValueKey(_timeline[index].date),
                 day: _timeline[index],
                 dayIndex: index,
                 dayNumber: index + 1,
@@ -225,8 +226,9 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   }
 }
 
-/// A single day section in the timeline — now interactive.
-class _DaySection extends StatelessWidget {
+/// A single day section in the timeline — interactive with intensity bar
+/// and Keep Together toggle (S-05).
+class _DaySection extends StatefulWidget {
   final TimelineDay day;
   final int dayIndex;
   final int dayNumber;
@@ -236,6 +238,7 @@ class _DaySection extends StatelessWidget {
   final void Function(int slotIndex) onDelete;
 
   const _DaySection({
+    super.key,
     required this.day,
     required this.dayIndex,
     required this.dayNumber,
@@ -246,32 +249,56 @@ class _DaySection extends StatelessWidget {
   });
 
   @override
+  State<_DaySection> createState() => _DaySectionState();
+}
+
+class _DaySectionState extends State<_DaySection> {
+  bool _keepTogether = false;
+
+  @override
   Widget build(BuildContext context) {
+    final day = widget.day;
     final dateStr = '${day.date.day}.${day.date.month}.${day.date.year}';
     final hours = day.totalMin ~/ 60;
     final mins = day.totalMin % 60;
+
+    final intensityColor = switch (day.intensity) {
+      DayIntensity.low => Colors.green,
+      DayIntensity.medium => Colors.amber,
+      DayIntensity.high => Colors.orange,
+    };
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Intensity bar (S-05)
+          Container(height: 4, color: intensityColor),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: day.overstuffed ? Colors.red.shade50 : Colors.blue.shade50,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius: day.overstuffed
+                  ? BorderRadius.zero
+                  : const BorderRadius.vertical(top: Radius.circular(12)),
             ),
             child: Row(
               children: [
                 Expanded(
-                  child: Text('Day $dayNumber — $dateStr', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  child: Text('Day ${widget.dayNumber} — $dateStr', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+                IconButton(
+                  icon: Icon(_keepTogether ? Icons.lock : Icons.lock_open, size: 20),
+                  tooltip: _keepTogether ? 'Warning hidden' : 'Show warning',
+                  onPressed: () => setState(() => _keepTogether = !_keepTogether),
+                  visualDensity: VisualDensity.compact,
                 ),
                 Text('${hours}h ${mins}m', style: TextStyle(color: day.overstuffed ? Colors.red : Colors.grey.shade700, fontWeight: FontWeight.w500)),
               ],
             ),
           ),
-          if (day.overstuffed)
+          if (day.overstuffed && !_keepTogether)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -284,16 +311,16 @@ class _DaySection extends StatelessWidget {
                 ],
               ),
             ),
-          if (day.tightSchedule && !day.overstuffed)
+          if (day.overstuffed && _keepTogether)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              color: Colors.orange.shade50,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: Colors.blue.shade50,
               child: const Row(
                 children: [
-                  Icon(Icons.info_outline, color: Colors.orange, size: 18),
+                  Icon(Icons.lock, color: Colors.blue, size: 18),
                   SizedBox(width: 8),
-                  Expanded(child: Text('Tight schedule', style: TextStyle(color: Colors.orange, fontSize: 13))),
+                  Expanded(child: Text('Overstuffing warning hidden', style: TextStyle(color: Colors.blue, fontSize: 13))),
                 ],
               ),
             ),
@@ -301,18 +328,18 @@ class _DaySection extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: day.slots.length,
-            onReorderItem: onReorder,
+            onReorderItem: widget.onReorder,
             proxyDecorator: (child, index, animation) => Material(elevation: 4, child: child),
             itemBuilder: (context, index) {
               final slot = day.slots[index];
               return _SlotTile(
                 key: ValueKey(slot.attraction.id),
                 slot: slot,
-                dayIndex: dayIndex,
+                dayIndex: widget.dayIndex,
                 slotIndex: index,
-                totalDays: totalDays,
-                onMoveDay: onMoveDay,
-                onDelete: onDelete,
+                totalDays: widget.totalDays,
+                onMoveDay: widget.onMoveDay,
+                onDelete: widget.onDelete,
               );
             },
           ),

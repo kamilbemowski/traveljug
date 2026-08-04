@@ -1,5 +1,20 @@
 import '../database/app_database.dart';
 
+/// Three-level day intensity based on % of waking budget used (S-05).
+enum DayIntensity {
+  low,     // <50%
+  medium,  // 50-80%
+  high,    // >80% (replaces tightSchedule)
+}
+
+/// Computes [DayIntensity] from total minutes used vs. waking budget.
+DayIntensity computeIntensity(int totalMin, int budgetMin) {
+  final ratio = totalMin / budgetMin;
+  if (ratio >= 0.8) return DayIntensity.high;
+  if (ratio >= 0.5) return DayIntensity.medium;
+  return DayIntensity.low;
+}
+
 /// One attraction placed on the timeline with its computed start time.
 class TimelineSlot {
   final Attraction attraction;
@@ -39,13 +54,17 @@ class TimelineDay {
   final bool overstuffed;
 
   /// True when the day is at 80%+ capacity but not yet overstuffed.
-  final bool tightSchedule;
+  /// Derives from [intensity] — single source of truth for the 0.8 threshold.
+  bool get tightSchedule => intensity == DayIntensity.high && !overstuffed;
+
+  /// Computed intensity level based on totalMin / budget ratio.
+  final DayIntensity intensity;
 
   const TimelineDay({
     required this.date,
     required this.slots,
     required this.totalMin,
     required this.overstuffed,
-    required this.tightSchedule,
+    required this.intensity,
   });
 }

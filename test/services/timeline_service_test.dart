@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:travelapp/database/app_database.dart';
+import 'package:travelapp/models/timeline_day.dart';
 import 'package:travelapp/services/timeline_service.dart';
 
 /// A minimal fake [Trip] with only the fields computeTimeline needs.
@@ -355,6 +356,40 @@ void main() {
       ]);
       // 30 × 0.7 (intensive multiplier) = 21 min
       expect(result[0].slots[1].travelFromPrevMin, 21);
+    });
+
+    // ── S-05: Intensity tests ──
+
+    test('intensity low — <50% of budget', () {
+      final trip = _trip(startDate: today, endDate: today);
+      final result = TimelineService.computeTimeline(
+        trip,
+        [_attr(durationMin: 60)],
+      );
+      expect(result[0].intensity, DayIntensity.low);
+      expect(result[0].tightSchedule, isFalse);
+    });
+
+    test('intensity medium — 50-80% of budget', () {
+      final trip = _trip(startDate: today, endDate: today);
+      // 600 / 960 = 62.5% → medium
+      final result = TimelineService.computeTimeline(
+        trip,
+        [_attr(durationMin: 600)],
+      );
+      expect(result[0].intensity, DayIntensity.medium);
+      expect(result[0].tightSchedule, isFalse);
+    });
+
+    test('intensity high — >80% of budget', () {
+      final trip = _trip(startDate: today, endDate: today);
+      // 800 / 960 = 83.3% → high
+      final result = TimelineService.computeTimeline(
+        trip,
+        [_attr(durationMin: 800)],
+      );
+      expect(result[0].intensity, DayIntensity.high);
+      expect(result[0].tightSchedule, isTrue);
     });
   });
 

@@ -1,10 +1,10 @@
 ---
 change_id: timeline-ux-polish
 title: "Timeline UX polish — intensity indicator + force overstuff"
-status: plan_reviewed
+status: impl_reviewed
 roadmap_ref: S-05
 created: 2026-07-27
-updated: 2026-07-27
+updated: 2026-08-04
 ---
 
 # Timeline UX Polish

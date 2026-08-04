@@ -186,22 +186,22 @@ Add a "Keep Together" toggle per day (lock icon 🔒/🔓). When active, the day
 
 #### Automated
 
-- [ ] 1.1 `flutter test` — all tests pass with intensity assertions
-- [ ] 1.2 `flutter analyze` passes
+- [x] 1.1 `flutter test` — all tests pass with intensity assertions — a30f7b2
+- [x] 1.2 `flutter analyze` passes — a30f7b2
 
 #### Manual
 
-- [ ] 1.3 Day cards show colored bar (green/amber/orange) matching intensity
-- [ ] 1.4 "Tight schedule" text banner replaced by bar
+- [x] 1.3 Day cards show colored bar (green/amber/orange) matching intensity
+- [x] 1.4 "Tight schedule" text banner replaced by bar
 
 ### Phase 2: Force-overstuff toggle
 
 #### Automated
 
-- [ ] 2.1 `flutter analyze` passes
-- [ ] 2.2 `flutter build apk --debug` compiles
+- [x] 2.1 `flutter analyze` passes — 171c940
+- [x] 2.2 `flutter build apk --debug` compiles — 171c940
 
 #### Manual
 
-- [ ] 2.3 Lock icon toggles Keep Together mode
-- [ ] 2.4 Overstuffing warning suppressed when locked
+- [x] 2.3 Lock icon toggles Keep Together mode
+- [x] 2.4 Overstuffing warning suppressed when locked
