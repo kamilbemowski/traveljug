@@ -26,7 +26,7 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         // S-06: Google Maps API key from local.properties (local dev) or GH Secrets (CI).
-        val localFile = rootProject.file("local.properties")
+        val localFile = file("local.properties")
         val mapsKey = if (localFile.exists()) {
             localFile.readLines()
                 .firstOrNull { it.startsWith("MAPS_API_KEY=") }
