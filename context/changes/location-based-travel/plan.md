@@ -484,4 +484,4 @@ Wire the Maps API key into GitHub Actions so `flutter build apk --debug` succeed
 
 #### Automated
 
-- [ ] 5.1 PR check CI passes with Maps API key wired
+- [x] 5.1 PR check CI passes with Maps API key wired
