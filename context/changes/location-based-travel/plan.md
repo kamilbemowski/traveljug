@@ -438,9 +438,9 @@ Wire the Maps API key into GitHub Actions so `flutter build apk --debug` succeed
 
 #### Automated
 
-- [x] 1.1 `dart run build_runner build` succeeds
-- [x] 1.2 `flutter analyze` passes
-- [x] 1.3 `flutter test` — all 48 existing tests pass
+- [x] 1.1 `dart run build_runner build` succeeds — 4222682
+- [x] 1.2 `flutter analyze` passes — 4222682
+- [x] 1.3 `flutter test` — all 48 existing tests pass — 4222682
 
 #### Manual
 
