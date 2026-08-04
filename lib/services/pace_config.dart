@@ -29,6 +29,30 @@ String travelContextLabel(TravelContext? context) {
   return '$name (${travelMinutesForContext(context)} min)';
 }
 
+// ── S-06: Speed constants for distance-to-time conversion ──
+
+/// Walking speed in km/h used for city tour context.
+const double kCitySpeedKmh = 5.0;
+
+/// Driving speed in km/h used for road trip context.
+/// Raised to 75 km/h because the detour factor now explicitly handles road circuity.
+const double kRoadTripSpeedKmh = 75.0;
+
+/// Default speed in km/h when travel context is null (conservative: walking pace).
+const double kDefaultSpeedKmh = 5.0;
+
+/// Minimum travel minutes between two stops with coordinates (pre-multiplier).
+/// Prevents 0 min for same-point or very close attractions.
+const int kMinPairTravelMin = 5;
+
+/// Returns the km/h speed used to convert distance → travel time.
+/// Mirrors [travelMinutesForContext]'s null-fallback pattern.
+double speedKmhForContext(TravelContext? context) => switch (context) {
+      TravelContext.city => kCitySpeedKmh,
+      TravelContext.roadTrip => kRoadTripSpeedKmh,
+      null => kDefaultSpeedKmh,
+    };
+
 /// Returns the base travel minutes for a given [TravelContext].
 /// Falls back to [kDefaultTravelMinutes] when context is null.
 int travelMinutesForContext(TravelContext? context) => switch (context) {

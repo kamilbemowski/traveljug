@@ -451,13 +451,13 @@ Wire the Maps API key into GitHub Actions so `flutter build apk --debug` succeed
 
 #### Automated
 
-- [ ] 2.1 `flutter test test/services/geo_utils_test.dart` — all Haversine + detour tests pass
-- [ ] 2.2 `flutter analyze` passes
+- [x] 2.1 `flutter test test/services/geo_utils_test.dart` — all Haversine + detour tests pass
+- [x] 2.2 `flutter analyze` passes
 
 #### Manual
 
-- [ ] 2.3 Haversine returns correct distances for known city pairs
-- [ ] 2.4 Detour factor brackets correct (1.6/1.35/1.2/1.15)
+- [x] 2.3 Haversine returns correct distances for known city pairs
+- [x] 2.4 Detour factor brackets correct (1.6/1.35/1.2/1.15)
 
 ### Phase 3: Timeline integration — per-pair travel time
 
