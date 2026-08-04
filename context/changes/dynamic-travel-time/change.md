@@ -1,10 +1,10 @@
 ---
 change_id: dynamic-travel-time
 title: "Dynamic travel time per trip context"
-status: plan_reviewed
+status: impl_reviewed
 roadmap_ref: S-04
 created: 2026-07-27
-updated: 2026-07-27
+updated: 2026-08-04
 ---
 
 # Dynamic Travel Time

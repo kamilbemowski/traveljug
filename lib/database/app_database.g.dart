@@ -81,6 +81,17 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, Trip> {
     requiredDuringInsert: false,
     defaultValue: const Constant('intensive'),
   );
+  static const VerificationMeta _travelContextMeta = const VerificationMeta(
+    'travelContext',
+  );
+  @override
+  late final GeneratedColumn<String> travelContext = GeneratedColumn<String>(
+    'travel_context',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -124,6 +135,7 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, Trip> {
     startDate,
     endDate,
     pace,
+    travelContext,
     createdAt,
     updatedAt,
     imageUrl,
@@ -180,6 +192,15 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, Trip> {
         pace.isAcceptableOrUnknown(data['pace']!, _paceMeta),
       );
     }
+    if (data.containsKey('travel_context')) {
+      context.handle(
+        _travelContextMeta,
+        travelContext.isAcceptableOrUnknown(
+          data['travel_context']!,
+          _travelContextMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -231,6 +252,10 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, Trip> {
         DriftSqlType.string,
         data['${effectivePrefix}pace'],
       )!,
+      travelContext: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}travel_context'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -263,6 +288,9 @@ class Trip extends DataClass implements Insertable<Trip> {
 
   /// Stored as [TravelPace.name], default `intensive`.
   final String pace;
+
+  /// Stored as [TravelContext.name]. Null = use default (30 min).
+  final String? travelContext;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -275,6 +303,7 @@ class Trip extends DataClass implements Insertable<Trip> {
     this.startDate,
     this.endDate,
     required this.pace,
+    this.travelContext,
     required this.createdAt,
     required this.updatedAt,
     this.imageUrl,
@@ -292,6 +321,9 @@ class Trip extends DataClass implements Insertable<Trip> {
       map['end_date'] = Variable<DateTime>(endDate);
     }
     map['pace'] = Variable<String>(pace);
+    if (!nullToAbsent || travelContext != null) {
+      map['travel_context'] = Variable<String>(travelContext);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || imageUrl != null) {
@@ -312,6 +344,9 @@ class Trip extends DataClass implements Insertable<Trip> {
           ? const Value.absent()
           : Value(endDate),
       pace: Value(pace),
+      travelContext: travelContext == null && nullToAbsent
+          ? const Value.absent()
+          : Value(travelContext),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       imageUrl: imageUrl == null && nullToAbsent
@@ -332,6 +367,7 @@ class Trip extends DataClass implements Insertable<Trip> {
       startDate: serializer.fromJson<DateTime?>(json['startDate']),
       endDate: serializer.fromJson<DateTime?>(json['endDate']),
       pace: serializer.fromJson<String>(json['pace']),
+      travelContext: serializer.fromJson<String?>(json['travelContext']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       imageUrl: serializer.fromJson<String?>(json['imageUrl']),
@@ -347,6 +383,7 @@ class Trip extends DataClass implements Insertable<Trip> {
       'startDate': serializer.toJson<DateTime?>(startDate),
       'endDate': serializer.toJson<DateTime?>(endDate),
       'pace': serializer.toJson<String>(pace),
+      'travelContext': serializer.toJson<String?>(travelContext),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'imageUrl': serializer.toJson<String?>(imageUrl),
@@ -360,6 +397,7 @@ class Trip extends DataClass implements Insertable<Trip> {
     Value<DateTime?> startDate = const Value.absent(),
     Value<DateTime?> endDate = const Value.absent(),
     String? pace,
+    Value<String?> travelContext = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<String?> imageUrl = const Value.absent(),
@@ -370,6 +408,9 @@ class Trip extends DataClass implements Insertable<Trip> {
     startDate: startDate.present ? startDate.value : this.startDate,
     endDate: endDate.present ? endDate.value : this.endDate,
     pace: pace ?? this.pace,
+    travelContext: travelContext.present
+        ? travelContext.value
+        : this.travelContext,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     imageUrl: imageUrl.present ? imageUrl.value : this.imageUrl,
@@ -384,6 +425,9 @@ class Trip extends DataClass implements Insertable<Trip> {
       startDate: data.startDate.present ? data.startDate.value : this.startDate,
       endDate: data.endDate.present ? data.endDate.value : this.endDate,
       pace: data.pace.present ? data.pace.value : this.pace,
+      travelContext: data.travelContext.present
+          ? data.travelContext.value
+          : this.travelContext,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       imageUrl: data.imageUrl.present ? data.imageUrl.value : this.imageUrl,
@@ -399,6 +443,7 @@ class Trip extends DataClass implements Insertable<Trip> {
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
           ..write('pace: $pace, ')
+          ..write('travelContext: $travelContext, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('imageUrl: $imageUrl')
@@ -414,6 +459,7 @@ class Trip extends DataClass implements Insertable<Trip> {
     startDate,
     endDate,
     pace,
+    travelContext,
     createdAt,
     updatedAt,
     imageUrl,
@@ -428,6 +474,7 @@ class Trip extends DataClass implements Insertable<Trip> {
           other.startDate == this.startDate &&
           other.endDate == this.endDate &&
           other.pace == this.pace &&
+          other.travelContext == this.travelContext &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.imageUrl == this.imageUrl);
@@ -440,6 +487,7 @@ class TripsCompanion extends UpdateCompanion<Trip> {
   final Value<DateTime?> startDate;
   final Value<DateTime?> endDate;
   final Value<String> pace;
+  final Value<String?> travelContext;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<String?> imageUrl;
@@ -450,6 +498,7 @@ class TripsCompanion extends UpdateCompanion<Trip> {
     this.startDate = const Value.absent(),
     this.endDate = const Value.absent(),
     this.pace = const Value.absent(),
+    this.travelContext = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.imageUrl = const Value.absent(),
@@ -461,6 +510,7 @@ class TripsCompanion extends UpdateCompanion<Trip> {
     this.startDate = const Value.absent(),
     this.endDate = const Value.absent(),
     this.pace = const Value.absent(),
+    this.travelContext = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.imageUrl = const Value.absent(),
@@ -473,6 +523,7 @@ class TripsCompanion extends UpdateCompanion<Trip> {
     Expression<DateTime>? startDate,
     Expression<DateTime>? endDate,
     Expression<String>? pace,
+    Expression<String>? travelContext,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<String>? imageUrl,
@@ -484,6 +535,7 @@ class TripsCompanion extends UpdateCompanion<Trip> {
       if (startDate != null) 'start_date': startDate,
       if (endDate != null) 'end_date': endDate,
       if (pace != null) 'pace': pace,
+      if (travelContext != null) 'travel_context': travelContext,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (imageUrl != null) 'image_url': imageUrl,
@@ -497,6 +549,7 @@ class TripsCompanion extends UpdateCompanion<Trip> {
     Value<DateTime?>? startDate,
     Value<DateTime?>? endDate,
     Value<String>? pace,
+    Value<String?>? travelContext,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<String?>? imageUrl,
@@ -508,6 +561,7 @@ class TripsCompanion extends UpdateCompanion<Trip> {
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       pace: pace ?? this.pace,
+      travelContext: travelContext ?? this.travelContext,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       imageUrl: imageUrl ?? this.imageUrl,
@@ -535,6 +589,9 @@ class TripsCompanion extends UpdateCompanion<Trip> {
     if (pace.present) {
       map['pace'] = Variable<String>(pace.value);
     }
+    if (travelContext.present) {
+      map['travel_context'] = Variable<String>(travelContext.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -556,6 +613,7 @@ class TripsCompanion extends UpdateCompanion<Trip> {
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
           ..write('pace: $pace, ')
+          ..write('travelContext: $travelContext, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('imageUrl: $imageUrl')
@@ -1357,6 +1415,7 @@ typedef $$TripsTableCreateCompanionBuilder =
       Value<DateTime?> startDate,
       Value<DateTime?> endDate,
       Value<String> pace,
+      Value<String?> travelContext,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<String?> imageUrl,
@@ -1369,6 +1428,7 @@ typedef $$TripsTableUpdateCompanionBuilder =
       Value<DateTime?> startDate,
       Value<DateTime?> endDate,
       Value<String> pace,
+      Value<String?> travelContext,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<String?> imageUrl,
@@ -1432,6 +1492,11 @@ class $$TripsTableFilterComposer extends Composer<_$AppDatabase, $TripsTable> {
 
   ColumnFilters<String> get pace => $composableBuilder(
     column: $table.pace,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get travelContext => $composableBuilder(
+    column: $table.travelContext,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1515,6 +1580,11 @@ class $$TripsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get travelContext => $composableBuilder(
+    column: $table.travelContext,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -1559,6 +1629,11 @@ class $$TripsTableAnnotationComposer
 
   GeneratedColumn<String> get pace =>
       $composableBuilder(column: $table.pace, builder: (column) => column);
+
+  GeneratedColumn<String> get travelContext => $composableBuilder(
+    column: $table.travelContext,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -1629,6 +1704,7 @@ class $$TripsTableTableManager
                 Value<DateTime?> startDate = const Value.absent(),
                 Value<DateTime?> endDate = const Value.absent(),
                 Value<String> pace = const Value.absent(),
+                Value<String?> travelContext = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> imageUrl = const Value.absent(),
@@ -1639,6 +1715,7 @@ class $$TripsTableTableManager
                 startDate: startDate,
                 endDate: endDate,
                 pace: pace,
+                travelContext: travelContext,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 imageUrl: imageUrl,
@@ -1651,6 +1728,7 @@ class $$TripsTableTableManager
                 Value<DateTime?> startDate = const Value.absent(),
                 Value<DateTime?> endDate = const Value.absent(),
                 Value<String> pace = const Value.absent(),
+                Value<String?> travelContext = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> imageUrl = const Value.absent(),
@@ -1661,6 +1739,7 @@ class $$TripsTableTableManager
                 startDate: startDate,
                 endDate: endDate,
                 pace: pace,
+                travelContext: travelContext,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 imageUrl: imageUrl,

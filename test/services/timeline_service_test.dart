@@ -9,6 +9,7 @@ Trip _trip({
   required DateTime startDate,
   required DateTime endDate,
   String pace = 'intensive',
+  String? travelContext,
 }) {
   return Trip(
     id: id ?? 1,
@@ -17,6 +18,7 @@ Trip _trip({
     startDate: startDate,
     endDate: endDate,
     pace: pace,
+    travelContext: travelContext,
     createdAt: DateTime.now(),
     updatedAt: DateTime.now(),
     imageUrl: null,
@@ -312,6 +314,47 @@ void main() {
         _attr(id: 2, durationMin: 60, position: 1),
       ]);
       expect(result[0].slots[1].travelFromPrevMin, 45);
+    });
+
+    // ── S-04: Travel context tests ──
+
+    test('city context uses 20 min base', () {
+      final trip = _trip(
+        startDate: today, endDate: today,
+        travelContext: 'city',
+      );
+      final result = TimelineService.computeTimeline(trip, [
+        _attr(id: 1, durationMin: 60, position: 0),
+        _attr(id: 2, durationMin: 60, position: 1),
+      ]);
+      // 20 × 0.7 (intensive multiplier) = 14 min
+      expect(result[0].slots[1].travelFromPrevMin, 14);
+    });
+
+    test('roadTrip context uses 90 min base', () {
+      final trip = _trip(
+        startDate: today, endDate: today,
+        travelContext: 'roadTrip',
+      );
+      final result = TimelineService.computeTimeline(trip, [
+        _attr(id: 1, durationMin: 60, position: 0),
+        _attr(id: 2, durationMin: 60, position: 1),
+      ]);
+      // 90 × 0.7 (intensive multiplier) = 63 min
+      expect(result[0].slots[1].travelFromPrevMin, 63);
+    });
+
+    test('null context uses 30 min default', () {
+      final trip = _trip(
+        startDate: today, endDate: today,
+        travelContext: null,
+      );
+      final result = TimelineService.computeTimeline(trip, [
+        _attr(id: 1, durationMin: 60, position: 0),
+        _attr(id: 2, durationMin: 60, position: 1),
+      ]);
+      // 30 × 0.7 (intensive multiplier) = 21 min
+      expect(result[0].slots[1].travelFromPrevMin, 21);
     });
   });
 

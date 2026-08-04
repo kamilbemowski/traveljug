@@ -22,7 +22,8 @@ class TimelineService {
 
     final config = parsePace(trip.pace).config;
     final dailyBudget = config.wakingMinutes;
-    final effectiveTravel = (kDefaultTravelMinutes * config.travelMultiplier).round();
+    final baseTravel = travelMinutesForContext(parseTravelContext(trip.travelContext));
+    final effectiveTravel = (baseTravel * config.travelMultiplier).round();
 
     final days = _dateRange(trip.startDate!, trip.endDate!);
     final timeline = <TimelineDay>[];
@@ -93,10 +94,15 @@ class TimelineService {
   /// Reapplies user overrides to the computed timeline.
   /// Each override moves an attraction to a user-specified day and position.
   /// Slots within each day are sorted by their override position.
+  ///
+  /// [pace] and [baseTravel] parameterize travel gap computation the same way
+  /// [computeTimeline] does — S-04 travel context flows through here.
   static List<TimelineDay> reapplyOverrides(
     List<TimelineDay> computed,
-    Map<int, TimelineOverride> overrides,
-  ) {
+    Map<int, TimelineOverride> overrides, {
+    String pace = 'intensive',
+    int baseTravel = kDefaultTravelMinutes,
+  }) {
     if (overrides.isEmpty) return computed;
     if (computed.isEmpty) return computed;
 
@@ -143,8 +149,8 @@ class TimelineService {
           : computed.last.date.add(Duration(days: d - computed.length + 1));
 
       // Recompute start times and travel gaps.
-      final config = parsePace('intensive').config; // fallback
-      final travel = (kDefaultTravelMinutes * config.travelMultiplier).round();
+      final config = parsePace(pace).config;
+      final travel = (baseTravel * config.travelMultiplier).round();
       var currentMin = config.wakeHour * 60;
       var total = 0;
       final adjustedSlots = <TimelineSlot>[];

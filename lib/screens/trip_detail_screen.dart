@@ -6,6 +6,7 @@ import '../database/daos/timeline_override_dao.dart';
 import '../database/daos/trip_dao.dart';
 import '../database/tables.dart';
 import '../models/timeline_day.dart';
+import '../services/pace_config.dart';
 import '../services/timeline_service.dart';
 
 class TripDetailScreen extends StatefulWidget {
@@ -63,7 +64,12 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     final computed = TimelineService.computeTimeline(trip, attractions);
     final overrideDao = TimelineOverrideDao(db);
     final overrides = await overrideDao.loadOverridesByTrip(widget.trip.id);
-    final timeline = TimelineService.reapplyOverrides(computed, overrides);
+    final baseTravel = travelMinutesForContext(parseTravelContext(trip.travelContext));
+    final timeline = TimelineService.reapplyOverrides(
+      computed, overrides,
+      pace: trip.pace,
+      baseTravel: baseTravel,
+    );
 
     setState(() { _trip = trip; _timeline = timeline; _error = null; _loading = false; });
   }
