@@ -9,6 +9,7 @@ tags: [research, s06, geo, haversine, drift, timeline, travel-time]
 status: complete
 last_updated: 2026-08-04
 last_updated_by: Claude
+last_updated_note: "Added follow-up research: routing API options (free + commercial) and detour factor analysis for road trip accuracy"
 ---
 
 # Research: S-06 Location-Based Travel Time
@@ -194,8 +195,75 @@ Add state:
 - `context/changes/dynamic-travel-time/plan.md` — S-04 travel context (prerequisite)
 - `context/changes/dynamic-travel-time/reviews/impl-review.md` — S-04 review findings
 
-## Open Questions
+## Follow-up Research: Routing API & Detour Factor (2026-08-04)
 
-1. **Walking speed (5 km/h) confirmation** — 5 km/h is a standard average walking speed. Should we offer "brisk walk" / "leisurely stroll" variants, or is one walking speed enough for MVP?
-2. **Coordinate input UX** — manual text entry of lat/lon is workable but tedious. Should we _require_ decimal degrees format or also accept DMS (degrees-minutes-seconds)?
-3. **Negative coordinates** — the validator should clearly indicate that south/west coordinates are negative (e.g., Buenos Aires: −34.6, −58.4). Add hint text?
+> Triggered by the question: "Haversine to tylko linia prosta. Czy to rozwiązanie uwzględnia istniejące drogi?" and "zrobmy dalej research z routing api."
+
+### ⭐ Recommendation: Haversine × distance-bracket detour factor for MVP
+
+**Do NOT add a routing API now.** The detour factor approach gives acceptable accuracy for travel planning, preserves the offline-first NFR, and the `pairTravelMinutes()` choke point makes a future routing API swap cheap. Here's why:
+
+---
+
+### 1. Detour factor: what the data says
+
+I measured 26 European driving routes on OSRM (live data, 2026-08-04) and cross-referenced with academic literature. The key finding across every study: **circuity (driving / straight-line) decreases with distance.**
+
+| Distance bracket | Observed circuity | Recommended factor |
+|---|---|---|
+| &lt;10 km (city) | 1.16–2.03, mean 1.61 | **1.6** |
+| 10–50 km (regional) | 1.07–2.11, mean 1.39 | **1.35** |
+| 50–200 km (road trip) | 1.12–1.49, mean 1.21 | **1.2** |
+| &gt;200 km (long haul) | 1.13–1.19, mean 1.17 | **1.15** |
+
+**Walking (city tour context):** 1.49–1.99, recommend **1.6 factor on top of 5 km/h** (effective ~3.1 km/h true walking pace).
+
+**Critical nuance — the 60 km/h road trip constant already bakes in some detour compensation.** 60 km/h × straight-line ≈ 44–51 km/h effective real speed in 10–200 km bands — a realistic door-to-door European average. Adding a factor on top without adjusting the speed would double-count. **The correct fix:** apply the bracket factor AND raise `kRoadTripSpeedKmh` from 60 → 75 km/h.
+
+**Mountain/water-barrier cases cannot be fixed by any distance-only method:**
+- Zakopane → Morskie Oko: straight-line 14 km, drive 28 km (1.96), then **no road access** (8 km hike)
+- Interlaken → Zermatt: 2.10, and Zermatt is car-free
+- A routing API only partially fixes these; the overstuffing warning + manual reorder is the real safety net
+
+**Literature sources:** Ballou et al. 2002 (Europe inter-city ~1.46), Springer 2026 "Driving the Extra Mile" (Europe 1.15–1.76, median 1.25), Mennicken et al. 2024 (300 European cities, average ~1.34), Giacomin & Levinson 2015 (circuity decreases with distance)
+
+---
+
+### 2. Free routing APIs — assessment
+
+| Provider | Free tier | Self-host RAM (Europe) | Matrix support | Dart package | Verdict for TravelJug |
+|---|---|---|---|---|---|
+| **OSRM** | Demo-only (~1 rps) | &gt;64 GB ❌ | `/table` (max 10k) | `osrm`, `routing_client_dart` | Best for prototyping; demo not for production; self-host too heavy for Europe |
+| **GraphHopper** | 500 cr/day, non-commercial | ~8–16 GB | `/matrix` (credits per pair) | none | Good API, lightest self-host; non-commercial free tier limits prod use |
+| **OpenRouteService** | **2,000 req/day + key** (~40 rps) | ~8–16 GB | `/v2/matrix` | **`open_route_service` 1.2.8** ✅ | **Best free hosted option** — real production quota, verified Dart client, nonprofit backing |
+| **Valhalla** | Demo-only (~1 rps/user) | **8–16 GB run / 16–32 GB build** | **`/sources_to_targets` — best matrix** | `routing_engine` | **Best self-hosted option** — lowest RAM, Docker, one-shot N×N matrix |
+
+**For TravelJug, if we ever add routing:**
+- **Free hosted:** OpenRouteService — 2,000 routes/day, nonprofit (HeiGIT), `open_route_service` Dart package
+- **Self-hosted offline:** Valhalla — 8–16 GB RAM per country extract, `/sources_to_targets` matrix in one call
+- **Neither is needed for MVP** — detour factor is the right call now
+
+### 3. Commercial routing APIs
+
+**Key finding: MVP scale is free on EVERY provider.** 900–4,500 calls/month (100–500 trips) = 3–45% of the smallest free tier.
+
+| Provider | Free tier/month | Cost/1K extra | European accuracy | Flutter SDK | Best for |
+|---|---|---|---|---|---|
+| **Mapbox** | **100,000 Directions** | $2.00 | Good cities, weakest rural (OSM-based, over-predicts) | `mapbox_maps_flutter` (display) | **Best overall MVP fit** — largest free tier, simplest GET API |
+| **TomTom** | 20,000 Routing + 2,500 Matrix | ~€0.50 | **Best European accuracy** (lowest RMSE, 58% routes ≥95% accurate) | None (REST only) | Accuracy purists |
+| **HERE** | 1,000/day (~30K/mo) | Quote-based | Very strong — European company, best attribute coverage | **Official HERE SDK for Flutter** with **offline routing** | **Offline routing** — only provider with offline Flutter SDK |
+| **Google** | 10,000 (Routes API Essentials) | $5.00 | Excellent — top-tier global data | `google_maps_flutter` (display only) | Ecosystem default (but classic API closed to new projects since March 2025) |
+
+**Note:** Google closed its legacy Distance Matrix API to new projects on March 1, 2025. New apps must use the Routes API with different pricing and POST+FieldMask format.
+
+**Verdict:** If we ever add a routing API, **Mapbox** is the pragmatic pick (free, simple, Flutter SDK). **HERE** wins if offline routing becomes a hard requirement. But for S-06 MVP, the detour factor approach (Section 1 above) is the right call.
+
+---
+
+## Open Questions (updated)
+
+1. **Prędkość piesza** — 5 km/h × detour factor 1.6 = efektywne ~3.1 km/h. OK dla MVP?
+2. **Format współrzędnych** — decimal degrees tylko, czy też DMS?
+3. **Hint dla ujemnych współrzędnych** — dodać podpowiedź "południe/zachód = wartość ujemna"?
+4. **Road trip speed** — podnieść 60 → 75 km/h przy detour factor? Czy zostawić 60 + factor (over-estimate)?
+5. **Czy detour factor approach (Haversine × bracket) jest zaakceptowany jako decyzja dla S-06?**
