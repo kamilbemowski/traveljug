@@ -3,8 +3,26 @@ import 'package:flutter/foundation.dart';
 import '../database/tables.dart';
 
 /// Default travel time between consecutive attractions (in minutes).
-/// Flat constant for MVP — will be replaced by per-trip context in S-04.
+/// Used as fallback when no [TravelContext] is set on the trip.
 const int kDefaultTravelMinutes = 30;
+
+/// Safe-parses a travel context string, returning null on unknown values.
+TravelContext? parseTravelContext(String? contextName) {
+  if (contextName == null) return null;
+  try {
+    return TravelContext.values.byName(contextName);
+  } on ArgumentError {
+    return null;
+  }
+}
+
+/// Returns the base travel minutes for a given [TravelContext].
+/// Falls back to [kDefaultTravelMinutes] when context is null.
+int travelMinutesForContext(TravelContext? context) => switch (context) {
+      TravelContext.city => 20,
+      TravelContext.roadTrip => 90,
+      null => kDefaultTravelMinutes,
+    };
 
 /// Concrete hour and budget parameters for each [TravelPace].
 class PaceConfig {

@@ -228,12 +228,12 @@ Add a "Travel context" dropdown to `CreateTripScreen` next to the "Pace" dropdow
 
 #### Automated
 
-- [ ] 2.1 `flutter test` — all tests pass with new context tests
-- [ ] 2.2 `flutter analyze` passes
+- [x] 2.1 `flutter test` — all tests pass with new context tests
+- [x] 2.2 `flutter analyze` passes
 
 #### Manual
 
-- [ ] 2.3 Different travel gaps for city vs road trip
+- [x] 2.3 Different travel gaps for city vs road trip
 
 ### Phase 3: Travel context dropdown in UI
 

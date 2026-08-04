@@ -22,7 +22,8 @@ class TimelineService {
 
     final config = parsePace(trip.pace).config;
     final dailyBudget = config.wakingMinutes;
-    final effectiveTravel = (kDefaultTravelMinutes * config.travelMultiplier).round();
+    final baseTravel = travelMinutesForContext(parseTravelContext(trip.travelContext));
+    final effectiveTravel = (baseTravel * config.travelMultiplier).round();
 
     final days = _dateRange(trip.startDate!, trip.endDate!);
     final timeline = <TimelineDay>[];
