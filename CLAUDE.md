@@ -29,3 +29,39 @@ Two boundaries to keep straight:
   masks the bug; that failing-test-to-fix case is Lesson 5.
 
 <!-- END @przeprogramowani/10x-cli -->
+
+## Developer Quickstart (TravelJug)
+
+How to work with this Flutter/Dart project. This section is hand-maintained,
+outside the 10x-cli managed block — keep it current.
+
+### One-time setup
+```bash
+flutter pub get
+dart run build_runner build   # generate Drift DAO code
+npx lefthook install           # install git hooks (pre-commit: analyze + test)
+```
+
+### Every change — quality gates (automated)
+| Gate | What runs | Trigger |
+|---|---|---|
+| Per-edit | `flutter analyze` + scoped `flutter test` | Agent `Write`/`Edit` (`.claude/settings.json`) |
+| Pre-commit | `flutter analyze` + `flutter test` | Lefthook (`lefthook.yml`) |
+| CI | `flutter analyze` + `flutter test` | GitHub Actions PR check (`.github/workflows/pr-check.yml`) |
+
+### Run tests
+```bash
+flutter test                    # all 39 tests
+flutter test test/services/     # unit tests (timeline engine)
+flutter test test/database/     # DAO integration tests (in-memory SQLite)
+flutter test test/integration/  # E2E service-level tests (R2, R5)
+flutter test test/screens/      # widget tests
+```
+
+### Key files for agents
+- `context/foundation/prd.md` — vision, user stories, FRs, business logic
+- `context/foundation/test-plan.md` — 5 risks (R1–R5), phased rollout, cookbook
+- `context/foundation/tech-stack.md` — stack decisions
+- `lib/services/timeline_service.dart` — core algorithm: `computeTimeline`, `reapplyOverrides`
+- `lib/database/app_database.dart` — Drift DB, schema v2, migration strategy
+- `lib/database/tables.dart` — schema: Trips, Attractions, TimelineOverrides (FK cascade)
