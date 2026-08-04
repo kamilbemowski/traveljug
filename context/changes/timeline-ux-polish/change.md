@@ -1,7 +1,7 @@
 ---
 change_id: timeline-ux-polish
 title: "Timeline UX polish — intensity indicator + force overstuff"
-status: implementing
+status: implemented
 roadmap_ref: S-05
 created: 2026-07-27
 updated: 2026-08-04

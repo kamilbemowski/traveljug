@@ -198,8 +198,8 @@ Add a "Keep Together" toggle per day (lock icon 🔒/🔓). When active, the day
 
 #### Automated
 
-- [x] 2.1 `flutter analyze` passes
-- [x] 2.2 `flutter build apk --debug` compiles
+- [x] 2.1 `flutter analyze` passes — 171c940
+- [x] 2.2 `flutter build apk --debug` compiles — 171c940
 
 #### Manual
 
