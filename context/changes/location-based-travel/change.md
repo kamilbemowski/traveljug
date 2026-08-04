@@ -1,7 +1,7 @@
 ---
 change_id: location-based-travel
 title: "Location-based travel time estimation"
-status: planned
+status: researched
 roadmap_ref: S-06
 created: 2026-08-04
 updated: 2026-08-04
