@@ -37,6 +37,7 @@ Solo leisure travelers juggle scattered notes, tabs, and memory to plan a trip. 
 | S-03  | manual-plan-adjustments     | reorder, remove, and add items in the plan; manual edits survive timeline recalculation | S-02             | FR-008                            | proposed |
 | S-04  | dynamic-travel-time         | set travel context per trip (city tour / road trip) and see accurate travel times instead of a flat 30 min default | S-03             | FR-004                            | proposed |
 | S-05  | timeline-ux-polish          | see day intensity indicator (low/medium/high), force-overstuff a day to keep attractions together, and get soft warnings for near-full days | S-02             | FR-005                            | proposed |
+| S-06  | location-based-travel       | optionally set coordinates per attraction and see travel times computed from actual distances instead of flat defaults | S-04             | PRD §Business Logic               | planned  |
 
 ## Streams
 
@@ -44,7 +45,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 
 | Stream | Theme              | Chain                          | Note                                                      |
 | ------ | ------------------ | ------------------------------ | --------------------------------------------------------- |
-| A      | Plan trajectory    | `F-01` → `S-01` → `S-02` → `S-03` → `S-04` → `S-05` | Główna ścieżka — od danych przez setup po core, dopracowanie i UX polish. |
+| A      | Plan trajectory    | `F-01` → `S-01` → `S-02` → `S-03` → `S-04` → `S-05` → `S-06` | Główna ścieżka — od danych przez setup po core, dopracowanie, UX polish i realne czasy przejazdu. |
 | B      | Infrastructure     | `F-02`, `F-03`                 | Fundamenty infrastrukturalne — niezależne od siebie i od Stream A. Można robić równolegle z F-01. |
 
 ## Baseline
@@ -171,6 +172,20 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Low. Additive changes on top of an already-working timeline. Does not modify the core algorithm.
 - **Status:** proposed
 
+### S-06: Location-based travel time estimation
+
+- **Outcome:** user can optionally set coordinates (lat/lon) per attraction, and the timeline computes actual straight-line distances between consecutive stops, converting them to travel minutes based on the trip's travel context (walking pace for city tour, driving pace for road trip). Attractions without coordinates fall back to the flat default — backward compatible.
+- **Change ID:** location-based-travel
+- **PRD refs:** PRD §Business Logic ("derived from location distance, or a flat default if location data is unavailable")
+- **Prerequisites:** S-04 (dynamic-travel-time — provides travel context needed for speed selection)
+- **Parallel with:** S-05 (pure UI polish, no dependency conflict)
+- **Blockers:** —
+- **Unknowns:**
+  - Walking vs driving speed constants — Owner: dev. Block: no (use 5 km/h walking, 60 km/h driving as sensible defaults).
+  - How users enter coordinates (manual input vs map picker) — Owner: dev. Block: no (start with manual text fields; map picker is a separate UX slice).
+- **Risk:** Low. Pure additive — nullable columns, no change to existing behavior. Risk is that entering coordinates manually is tedious and users won't bother; mitigation: make fields optional and keep the flat-default fallback.
+- **Status:** planned
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID                   | Suggested issue title                          | Ready for `/10x-plan` | Notes |
@@ -183,6 +198,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-03       | manual-plan-adjustments     | Manual plan adjustments with edit survival     | no                    | Blocked by S-02 |
 | S-04       | dynamic-travel-time         | Dynamic travel time per trip context           | no                    | Blocked by S-03 |
 | S-05       | timeline-ux-polish          | Timeline UX polish: intensity + force stuff    | no                    | Blocked by S-02 |
+| S-06       | location-based-travel       | Location-based travel time from coordinates    | no                    | Blocked by S-04 |
 
 ## Open Roadmap Questions
 
