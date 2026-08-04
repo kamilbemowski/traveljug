@@ -1,47 +1,80 @@
 # S-06: Location-Based Travel Time — Plan Brief
 
-## Overview
+> Full plan: `context/changes/location-based-travel/plan.md`
+> Research: `context/changes/location-based-travel/research.md`
 
-Replace or augment the flat `kDefaultTravelMinutes` with actual distances between attractions. Each attraction gets optional coordinates; the travel time between consecutive attractions is computed from the straight-line distance and the trip's travel context.
+## What & Why
 
-## Current state
+Zastępujemy sztywny flat default czasu przejazdu realnymi odległościami między atrakcjami. User opcjonalnie klika lokalizację na mapie Google dla każdej atrakcji. Timeline liczy dystans Haversine, aplikuje distance-bracket detour factor, konwertuje na minuty przez prędkość (walking 5 km/h × 1.6, driving 75 km/h × factor), i spada do S-04 flat default gdy współrzędnych brak. PRD §Business Logic: "travel time between consecutive stops — derived from location distance, or a flat default."
 
-- `kDefaultTravelMinutes = 30` in `lib/services/pace_config.dart:4` — used by `TimelineService.computeTimeline()`
-- S-04 (dynamic-travel-time) will add `TravelContext` enum with base minutes (City tour=20, Road trip=90) — S-06 builds on top of this
-- `Attractions` table has no coordinate columns
-- Timeline algorithm accepts `effectiveTravel` as a parameter — swapping the constant for a computed value is a one-line change
+## Starting Point
 
-## What to build
+S-04 dostarcza `TravelContext` (city/roadTrip) i `travelMinutesForContext()` (20/90/30 min). S-06 dodaje na to warstwę: gdy atrakcje mają współrzędne, realny dystans zastępuje bazową wartość minutażu per para. `Attractions` nie ma kolumn lat/lon. `TimelineService.computeTimeline()` używa jednego `effectiveTravel` dla wszystkich par atrakcji.
 
-### Phase 1: Coordinate fields on Attraction
-- Add nullable `latitude` / `longitude` (real/float) to `Attractions` table
-- Bump schema version, regenerate drift code
-- Add optional coordinate fields to `AttractionDao.createAttraction()` and `updateAttraction()`
-- Add coordinate text fields to `_AddAttractionDialog` (optional, collapsed by default)
+## Desired End State
 
-### Phase 2: Haversine distance calculation
-- New pure function `haversineKm(lat1, lon1, lat2, lon2)` in a new file (e.g. `lib/services/geo_utils.dart`)
-- Unit tests for known city pairs (Paris-London ≈ 343 km, zero distance for same point)
+User klika "Add location (optional)" → pełnoekranowa mapa Google → tap na miejsce → współrzędne auto-wypełnione. Timeline między dwiema atrakcjami z koordynatami pokazuje realistyczny czas przejazdu (Haversine × detour × prędkość) zamiast sztywnego defaultu. Atrakcje bez współrzędnych spadają do S-04 flat default. Działa offline z timeout fallbackiem (5s → prompt do Google Maps app).
 
-### Phase 3: Wire into timeline
-- In `TimelineService.computeTimeline()`, when two consecutive attractions both have coordinates, compute distance and convert to travel minutes using the trip's travel context speed (city ≈ walking 5 km/h, road trip ≈ driving 60 km/h)
-- Fall back to flat default when any attraction in the pair lacks coordinates
-- Existing behavior unchanged for trips without coordinates
+## Key Decisions Made
 
-## Risks
+| Decision | Choice | Why | Source |
+|---|---|---|---|
+| Dystans | Haversine (dart:math, zero paczek) | Offline-first, 12 linii kodu, ~0.5% error vs WGS-84 | Research |
+| Detour factor | Distance-bracket: <10 km ×1.6, 10-50 ×1.35, 50-200 ×1.2, >200 ×1.15 | Dane empiryczne z 26 europejskich tras OSRM + literatura | Research |
+| Road trip speed | 75 km/h (podniesione z 60) + detour factor | 60 km/h już kompensowało detour implicite — podnosimy jawnie | Research |
+| Walking speed | 5 km/h × 1.6 = efektywne ~3.1 km/h | Realistyczne tempo z przystankami; 5-min buffer na sub-km szum | Research |
+| Map picker | Google Maps Flutter, pełnoekranowy dialog | $0 (Maps SDK unlimited free), lepszy UX niż OSM | Plan |
+| API key | AndroidManifest placeholder + local.properties, GH Secrets dla CI | Pattern GOOGLE_SERVICES_JSON już istnieje | Plan |
+| Fallback | Timeout 5s → prompt do Google Maps app | User zawsze może dostać współrzędne | Plan |
+| Routing API | NIE na MVP | Detour factor wystarcza; `pairTravelMinutes()` choke point pozwala swap w przyszłości | Research |
 
-| Risk | Mitigation |
-|---|---|
-| Coordinates are tedious to enter manually | Make fields optional, collapsed behind "Add location (optional)" in dialog. Users who don't care get flat defaults. |
-| Straight-line distance ≠ actual travel time | Haversine × multiplier is a reasonable approximation. Full routing is out of scope. |
-| Schema migration (v3 → v4) | Nullable columns — backward compatible. Existing attractions get `null` coordinates, fall back to flat defaults. |
+## Scope
 
-## Dependencies
+**In scope:** Attractions.latitude/longitude (real, nullable), schema v3→v4, Haversine + detour w geo_utils.dart, speed constants w pace_config.dart, pairTravelMinutes() w TimelineService, per-pair w computeTimeline + reapplyOverrides, google_maps_flutter, pełnoekranowy map picker, timeout fallback, CI wiring
 
-- S-04 (dynamic-travel-time) should be done first — travel context determines the speed used to convert distance → time
-- S-02 (timeline engine) — no changes needed, accepts `effectiveTravel` as parameter
+**Out of scope:** Geocoding API, routing API, iOS konfiguracja, reverse geocoding, GPS auto-location, per-attraction travel time override
 
-## Test strategy
+## Architecture / Approach
 
-- Unit tests: `haversineKm()` for known distances
-- Timeline tests: mixed attractions (with/without coordinates) — verify per-pair fallback
+```
+User taps "Pick on map"
+  → MapPickerScreen (full-screen GoogleMap)
+    → LatLng returned
+      → _latitude, _longitude stored
+        → createAttraction(latitude:, longitude:)
+          → DB stores nullable REALs
+
+Timeline computation:
+  for each consecutive pair (prevAttr, attr):
+    haversineKm(prev, attr) → straight-line km
+    detourFactor(km) → bracket multiplier
+    × speed (5 or 75 km/h) → minutes
+    × pace multiplier (0.7 or 1.5) → final travel gap
+    fallback: travelMinutesForContext(context) if any coord missing
+```
+
+## Phases at a Glance
+
+| Phase | What it delivers | Key risk |
+|---|---|---|
+| 1. Schema | lat/lon RealColumns, migration v4, DAO update | Migration order (v3→v4 additive, no risk) |
+| 2. Geo | Haversine + detour + speed constants, unit-tested | Precision edge cases (antipodes, same-point) |
+| 3. Timeline | Per-pair travel time in computeTimeline + reapplyOverrides | reapplyOverrides regression (must pass speedKmh) |
+| 4. UI | google_maps_flutter dependency, map picker dialog, fallback | API key wiring in AndroidManifest |
+| 5. CI | GH Secrets for Maps API key in workflows | Must not break existing PR checks |
+
+**Prerequisites:** S-04 (dynamic-travel-time) ✅, Google Cloud project with Maps SDK enabled
+**Estimated effort:** ~2-3 sesje, 5 faz
+
+## Open Risks & Assumptions
+
+- Google Cloud project musi mieć włączony Maps SDK for Android — wymaga konta Google i podpięcia billing (ale $0 przy unlimited free tier)
+- iOS nie jest w scope tego slica — Android-only
+- url_launcher do otwierania Google Maps app może potrzebować dodatkowej konfiguracji na iOS (poza scope)
+
+## Success Criteria (Summary)
+
+- User może dodać współrzędne przez tap na mapie Google
+- Timeline pokazuje realistyczny czas przejazdu gdy obie atrakcje mają współrzędne
+- Atrakcje bez współrzędnych spadają do S-04 flat default (backward compatible)
+- CI przechodzi z nowym Maps API key
