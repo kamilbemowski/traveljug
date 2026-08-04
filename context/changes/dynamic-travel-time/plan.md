@@ -228,8 +228,8 @@ Add a "Travel context" dropdown to `CreateTripScreen` next to the "Pace" dropdow
 
 #### Automated
 
-- [x] 2.1 `flutter test` — all tests pass with new context tests
-- [x] 2.2 `flutter analyze` passes
+- [x] 2.1 `flutter test` — all tests pass with new context tests — 0a30e83
+- [x] 2.2 `flutter analyze` passes — 0a30e83
 
 #### Manual
 
