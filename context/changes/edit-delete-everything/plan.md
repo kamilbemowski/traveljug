@@ -240,9 +240,9 @@ No migration needed. Schema unchanged at v4. All DAO methods already exist and a
 
 #### Automated
 
-- [ ] 1.1 `flutter analyze` passes
-- [ ] 1.2 `flutter test` — all existing tests pass
-- [ ] 1.3 Widget test: delete from list triggers confirmation dialog
+- [x] 1.1 `flutter analyze` passes
+- [x] 1.2 `flutter test` — all existing tests pass
+- [x] 1.3 Widget test: delete from list triggers confirmation dialog
 
 #### Manual
 
