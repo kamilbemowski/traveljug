@@ -260,6 +260,85 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     );
   }
 
+  Future<void> _handleEditAttraction(int dayIndex, int slotIndex) async {
+    final slot = _timeline[dayIndex].slots[slotIndex];
+    final nameCtrl = TextEditingController(text: slot.attraction.name);
+    final durCtrl = TextEditingController(text: slot.attraction.durationMin.toString());
+    AttractionCategory cat;
+    try {
+      cat = AttractionCategory.values.byName(slot.attraction.category);
+    } on ArgumentError {
+      cat = AttractionCategory.other;
+    }
+    int prio = slot.attraction.priority;
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Edit Attraction'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: durCtrl,
+                  decoration: const InputDecoration(labelText: 'Duration (minutes)'),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<AttractionCategory>(
+                  initialValue: cat,
+                  decoration: const InputDecoration(labelText: 'Category'),
+                  items: AttractionCategory.values.map((c) => DropdownMenuItem(value: c, child: Text(c.name[0].toUpperCase() + c.name.substring(1)))).toList(),
+                  onChanged: (v) { if (v != null) setDialogState(() => cat = v); },
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<int>(
+                  initialValue: prio,
+                  decoration: const InputDecoration(labelText: 'Priority'),
+                  items: const [
+                    DropdownMenuItem(value: 0, child: Text('Must-have')),
+                    DropdownMenuItem(value: 1, child: Text('Nice-to-have')),
+                    DropdownMenuItem(value: 2, child: Text('Optional')),
+                  ],
+                  onChanged: (v) { if (v != null) setDialogState(() => prio = v); },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+          ],
+        ),
+      ),
+    );
+    if (saved != true) return;
+
+    final dur = int.tryParse(durCtrl.text.trim());
+    if (dur == null || dur <= 0) return;
+
+    try {
+      final db = await getDatabase();
+      await AttractionDao(db).updateAttraction(slot.attraction.id,
+        name: nameCtrl.text.trim(),
+        durationMin: dur,
+        category: cat,
+        priority: prio,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update attraction. Please try again.')),
+      );
+      return;
+    }
+    _loadTimeline();
+  }
+
   Future<void> _handleDelete(int slotIndex, int dayIndex) async {
     final slot = _timeline[dayIndex].slots[slotIndex];
     final confirm = await showDialog<bool>(
@@ -367,6 +446,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                 onReorder: (oldIdx, newIdx) => _handleReorder(index, oldIdx, newIdx),
                 onMoveDay: (slotIdx, dir) => _handleMoveDay(index, slotIdx, dir),
                 onDelete: (slotIdx) => _handleDelete(slotIdx, index),
+                onEdit: (slotIdx) => _handleEditAttraction(index, slotIdx),
               );
             },
           ),
@@ -399,6 +479,7 @@ class _DaySection extends StatefulWidget {
   final void Function(int oldIndex, int newIndex) onReorder;
   final void Function(int slotIndex, int direction) onMoveDay;
   final void Function(int slotIndex) onDelete;
+  final void Function(int slotIndex) onEdit;
 
   const _DaySection({
     super.key,
@@ -409,6 +490,7 @@ class _DaySection extends StatefulWidget {
     required this.onReorder,
     required this.onMoveDay,
     required this.onDelete,
+    required this.onEdit,
   });
 
   @override
@@ -503,6 +585,7 @@ class _DaySectionState extends State<_DaySection> {
                 totalDays: widget.totalDays,
                 onMoveDay: widget.onMoveDay,
                 onDelete: widget.onDelete,
+                onEdit: widget.onEdit,
               );
             },
           ),
@@ -520,6 +603,7 @@ class _SlotTile extends StatelessWidget {
   final int totalDays;
   final void Function(int slotIndex, int direction) onMoveDay;
   final void Function(int slotIndex) onDelete;
+  final void Function(int slotIndex) onEdit;
 
   const _SlotTile({
     super.key,
@@ -529,6 +613,7 @@ class _SlotTile extends StatelessWidget {
     required this.totalDays,
     required this.onMoveDay,
     required this.onDelete,
+    required this.onEdit,
   });
 
   @override
@@ -552,6 +637,7 @@ class _SlotTile extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          IconButton(icon: const Icon(Icons.edit, size: 18), onPressed: () => onEdit(slotIndex), tooltip: 'Edit attraction', visualDensity: VisualDensity.compact),
           if (dayIndex > 0)
             IconButton(icon: const Icon(Icons.arrow_back, size: 18), onPressed: () => onMoveDay(slotIndex, -1), tooltip: 'Move to previous day', visualDensity: VisualDensity.compact),
           if (dayIndex < totalDays - 1)

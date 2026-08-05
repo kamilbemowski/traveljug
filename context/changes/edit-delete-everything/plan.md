@@ -240,9 +240,9 @@ No migration needed. Schema unchanged at v4. All DAO methods already exist and a
 
 #### Automated
 
-- [x] 1.1 `flutter analyze` passes
-- [x] 1.2 `flutter test` — all existing tests pass
-- [x] 1.3 Widget test: delete from list triggers confirmation dialog
+- [x] 1.1 `flutter analyze` passes — 35402e4
+- [x] 1.2 `flutter test` — all existing tests pass — 35402e4
+- [x] 1.3 Widget test: delete from list triggers confirmation dialog — 35402e4
 
 #### Manual
 
@@ -254,9 +254,9 @@ No migration needed. Schema unchanged at v4. All DAO methods already exist and a
 
 #### Automated
 
-- [ ] 2.1 `flutter analyze` passes
-- [ ] 2.2 `flutter test` — all existing tests pass
-- [ ] 2.3 Widget test: edit dialog opens with pre-filled values
+- [x] 2.1 `flutter analyze` passes
+- [x] 2.2 `flutter test` — all existing tests pass
+- [x] 2.3 Widget test: edit dialog opens with pre-filled values
 
 #### Manual
 
