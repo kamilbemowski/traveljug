@@ -38,11 +38,6 @@ Solo leisure travelers juggle scattered notes, tabs, and memory to plan a trip. 
 | S-04  | dynamic-travel-time         | set travel context per trip (city tour / road trip) and see accurate travel times instead of a flat 30 min default | S-03             | FR-004                            | proposed |
 | S-05  | timeline-ux-polish          | see day intensity indicator (low/medium/high), force-overstuff a day to keep attractions together, and get soft warnings for near-full days | S-02             | FR-005                            | proposed |
 | S-06  | location-based-travel       | optionally set coordinates per attraction and see travel times computed from actual distances instead of flat defaults | S-04             | PRD §Business Logic               | planned  |
-| S-07  | edit-delete-everything      | edit and delete every entity in the app — trips, attractions, overrides — from any view where they appear | S-03             | FR-001, FR-003, FR-008            | proposed |
-| S-08  | map-search                  | search for places by name on the map (geocoding) when picking attraction locations instead of only tap-to-place | S-06             | S-06 extension                    | proposed |
-| S-09  | android-auto                | Android Auto integration — view today's plan, navigate to next attraction, mark attractions as visited from car dashboard | S-02             | NFR: Android 10+                  | proposed |
-| S-10  | gps-notification            | GPS-based geofencing notifications — alert when approaching a saved attraction during travel | S-06             | S-06 extension                    | proposed |
-| S-11  | openrouter-ai-suggestions   | AI-powered attraction and itinerary suggestions via OpenRouter API — get personalized recommendations based on trip context, pace, and existing attractions | S-02, S-04       | Future PRD extension              | proposed |
 
 ## Streams
 
@@ -50,9 +45,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 
 | Stream | Theme              | Chain                          | Note                                                      |
 | ------ | ------------------ | ------------------------------ | --------------------------------------------------------- |
-| A      | Plan trajectory    | `F-01` → `S-01` → `S-02` → `S-03` → `S-04` → `S-05` → `S-06` | Główna ścieżka MVP — dane → core → polish → realne czasy przejazdu. |
-| B      | Infrastructure     | `F-02`, `F-03`                 | Fundamenty infrastrukturalne. |
-| C      | Post-MVP features  | `S-07` → `S-08`, `S-10` → `S-11`, `S-09` | Edycja/delete, map search, geofencing, AI, Android Auto — luźno powiązane, można równolegle. |
+| A      | Plan trajectory    | `F-01` → `S-01` → `S-02` → `S-03` → `S-04` → `S-05` → `S-06` | Główna ścieżka — od danych przez setup po core, dopracowanie, UX polish i realne czasy przejazdu. |
 | B      | Infrastructure     | `F-02`, `F-03`                 | Fundamenty infrastrukturalne — niezależne od siebie i od Stream A. Można robić równolegle z F-01. |
 
 ## Baseline
@@ -193,80 +186,6 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Low. Pure additive — nullable columns, no change to existing behavior. Risk is that entering coordinates manually is tedious and users won't bother; mitigation: make fields optional and keep the flat-default fallback.
 - **Status:** planned
 
-### S-07: Edit & Delete Everything
-
-- **Outcome:** user can edit and delete every entity from every view — trip name/destination/dates/pace from trip detail, attraction name/duration/category/priority from the timeline, and individual overrides. Delete confirmation dialogs on all destructive actions. No more "create-only" workflows — full CRUD surface exposed in UI.
-- **Change ID:** edit-delete-everything
-- **PRD refs:** FR-001, FR-003, FR-008
-- **Prerequisites:** S-03 (manual adjustments established the UX patterns for inline edits)
-- **Parallel with:** S-08, S-10 (independent UI concerns)
-- **Blockers:** —
-- **Unknowns:**
-  - Edit trip fields inline on trip detail screen or separate edit screen? — Owner: dev. Block: no (design in `/10x-plan`).
-  - Override deletion — per-attraction or bulk "reset plan"? — Owner: dev. Block: no.
-- **Risk:** Low. DAOs already support full CRUD — this is pure UI wiring. Risk is scope creep: "edit everything" can balloon. Mitigation: define exact set of editable fields per entity before starting.
-- **Status:** proposed
-
-### S-08: Map Search (Geocoding)
-
-- **Outcome:** user can search for a place by name ("Luwr, Paryż") in the map picker and get a list of matching locations. Tapping a result moves the map to that location and drops a pin. Falls back gracefully when offline (manual coordinates still available).
-- **Change ID:** map-search
-- **PRD refs:** S-06 extension
-- **Prerequisites:** S-06 (location-based-travel — map picker must exist)
-- **Parallel with:** S-07, S-11
-- **Blockers:** —
-- **Unknowns:**
-  - Geocoding provider: Google Geocoding API ($5/1000 after 10K free) vs OSM Nominatim (free, 1 req/s)? — Owner: dev. Block: no (research in `/10x-plan`).
-  - Cache geocoding results locally? — Owner: dev. Block: no.
-- **Risk:** Medium. Breaks offline-first NFR if not implemented with cache/fallback. API cost at scale (but MVP usage is negligible). Mitigation: cache results in local DB, fall back to manual entry.
-- **Status:** proposed
-
-### S-09: Android Auto Integration
-
-- **Outcome:** user connects phone to car, Android Auto displays today's plan on the dashboard. Shows current/next attraction with navigation shortcut, mark-as-visited button, and timeline overview. Read-only while driving — all edits happen on the phone when parked.
-- **Change ID:** android-auto
-- **PRD refs:** NFR: Android 10+
-- **Prerequisites:** S-02 (timeline must exist), S-06 (coordinates needed for navigation)
-- **Parallel with:** S-10
-- **Blockers:** —
-- **Unknowns:**
-  - Android Auto app structure — media app template vs custom DHU? — Owner: dev. Block: no (research in `/10x-plan`).
-  - Google Play approval for Android Auto category? — Owner: dev. Block: no (submit after implementation).
-  - Navigation integration: Google Maps intents or embedded? — Owner: dev. Block: no (intents are simpler for MVP).
-- **Risk:** High. Android Auto testing requires car or emulator (DHU). Limited Flutter support — may need platform channel + native Android code. Mitigation: start with DHU emulator, keep scope minimal (read-only plan view + navigation intents).
-- **Status:** proposed
-
-### S-10: GPS Geofencing Notifications
-
-- **Outcome:** user optionally enables GPS notifications per trip. When approaching a saved attraction (within configurable radius, default 500m), the phone shows a notification: "You're near [Attraction Name] — [duration] min visit, [category]". User taps notification to open the attraction details in the app.
-- **Change ID:** gps-notification
-- **PRD refs:** S-06 extension
-- **Prerequisites:** S-06 (coordinates needed for geofencing)
-- **Parallel with:** S-09
-- **Blockers:** —
-- **Unknowns:**
-  - Background location permissions on Android 10+ — foreground service required? — Owner: dev. Block: no (research in `/10x-plan`).
-  - Battery impact of continuous GPS monitoring? — Owner: dev. Block: no (use geofencing API instead of continuous polling).
-  - Configurable radius per trip vs global setting? — Owner: dev. Block: no (start with global 500m).
-- **Risk:** Medium. Android background location restrictions are strict (Android 10+). Geofencing API (`GeofencingClient`) requires Google Play Services. Mitigation: make feature opt-in per trip, use platform geofencing API (not continuous GPS), test on Android 10+.
-- **Status:** proposed
-
-### S-11: OpenRouter AI Suggestions
-
-- **Outcome:** user can request AI-powered attraction suggestions for a trip. The app sends trip context (destination, pace, dates, existing attractions, travel context) to OpenRouter API, which returns personalized recommendations. User can browse suggestions and add selected ones to the trip. Suggestions respect the trip's existing plan — no duplicates, fits within remaining day budget.
-- **Change ID:** openrouter-ai-suggestions
-- **PRD refs:** Future PRD extension
-- **Prerequisites:** S-02 (timeline), S-04 (travel context)
-- **Parallel with:** S-08
-- **Blockers:** —
-- **Unknowns:**
-  - OpenRouter model selection — which model for travel recommendations? — Owner: dev. Block: no (research in `/10x-plan`; likely Claude or GPT-4o-mini).
-  - Prompt engineering — how to format trip context for the model? — Owner: dev. Block: no (design in `/10x-plan`).
-  - Cost — per-request pricing? Cache suggestions per destination? — Owner: dev. Block: no (estimate in `/10x-plan`).
-  - Offline fallback? — No. AI suggestions require internet by definition.
-- **Risk:** Medium. External API dependency breaks offline-first for this feature. API costs at scale. Quality depends on prompt quality. Mitigation: feature is opt-in, clearly labeled "requires internet", cache results per destination, set budget limit.
-- **Status:** proposed
-
 ## Backlog Handoff
 
 | Roadmap ID | Change ID                   | Suggested issue title                          | Ready for `/10x-plan` | Notes |
@@ -280,11 +199,6 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-04       | dynamic-travel-time         | Dynamic travel time per trip context           | no                    | Blocked by S-03 |
 | S-05       | timeline-ux-polish          | Timeline UX polish: intensity + force stuff    | no                    | Blocked by S-02 |
 | S-06       | location-based-travel       | Location-based travel time from coordinates    | no                    | Blocked by S-04 |
-| S-07       | edit-delete-everything      | Edit and delete all entities from UI           | no                    | Blocked by S-03 |
-| S-08       | map-search                  | Geocoding search in map picker                 | no                    | Blocked by S-06 |
-| S-09       | android-auto                | Android Auto dashboard integration             | no                    | Blocked by S-02, S-06 |
-| S-10       | gps-notification            | GPS geofencing notifications                  | no                    | Blocked by S-06 |
-| S-11       | openrouter-ai-suggestions   | AI attraction suggestions via OpenRouter       | no                    | Blocked by S-02, S-04 |
 
 ## Open Roadmap Questions
 
