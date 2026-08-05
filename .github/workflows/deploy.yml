@@ -2,7 +2,7 @@ name: Build & Deploy to Firebase
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   workflow_dispatch:
 
 permissions:
@@ -45,6 +45,11 @@ jobs:
           echo "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+      - name: Configure Maps API key
+        run: echo "MAPS_API_KEY=$MAPS_API_KEY" >> android/app/local.properties
+        env:
+          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
+
       - name: Patch compileSdk for firebase_app_distribution_android
         run: |
           sed -i 's/compileSdkVersion 30/compileSdkVersion 35/' \
@@ -85,6 +90,7 @@ jobs:
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
 
       - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main'
         run: |
           BASE="v$(grep '^version:' pubspec.yaml | head -1 | awk '{print $2}' | cut -d+ -f1)"
           TAG="${BASE}-${{ github.run_number }}"

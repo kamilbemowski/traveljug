@@ -1,137 +1,130 @@
 ---
-project: null
-context_type: greenfield
+project: TravelJug
+context_type: brownfield
 product_type: mobile
 target_scale:
   users: small
 timeline_budget:
-  mvp_weeks: 3
+  delivery_weeks: null
   hard_deadline: null
   after_hours_only: true
-created: 2026-06-08
-updated: 2026-06-08
+created: 2026-08-05
+updated: 2026-08-05
 checkpoint:
   current_phase: 8
   phases_completed: [1, 2, 3, 4, 5, 6, 7]
-  gray_areas_resolved:
-    - topic: "pain category"
-      decision: "Workflow friction — scattered tools, no single place to plan and reference a trip. MVP focus: planner as the hub for all trip info, easily accessible when needed."
-    - topic: "primary persona"
-      decision: "Solo leisure travelers planning their own vacations, road trips, city breaks."
-    - topic: "insight — why not built already"
-      decision: "Existing travel apps are rigid itinerary-holders; they store a plan but don't help shape one or surface the right info at the right moment."
   frs_drafted: 8
   quality_check_status: accepted
 ---
 
+# Shape Notes: TravelJug Post-MVP
+
+## Current System
+
+TravelJug to mobilna aplikacja do planowania podróży (Flutter/Dart, Drift SQLite, offline-first). Obecnie oblicza intensywność planu podróży — timeline z podziałem na dni, travel gaps, overstuffing warnings, intensity indicator. Użytkownik tworzy tripa, dodaje atrakcje, apka wylicza czy plan jest wykonalny. Może też ręcznie zmieniać kolejność i przenosić atrakcje między dniami (override'y).
+
+Aplikacja jest **kalkulatorem intensywności**, nie pełnym plannerem. Działa offline, wszystkie dane lokalnie, jeden użytkownik.
+
+Użytkownicy: solo leisure travelers (ta sama persona co MVP).
+
 ## Vision & Problem Statement
 
-Solo leisure travelers planning a trip are stuck juggling scattered notes, browser tabs, bookmarks, and their own memory to assemble and reference a travel plan. There is no single place that holds all the trip information — attractions, hints, routes, practical notes — and surfaces it when the traveler actually needs it, whether during planning or on the ground.
+MVP działa — apka poprawnie wylicza timeline. Ale brakuje funkcji które realnie **pomagają zaplanować podróż**:
 
-Existing travel apps are rigid itinerary containers. They expect a fixed schedule and offer no help shaping the plan itself — no discovery, no structure beyond a list of times and places. The traveler does the real work of deciding what matters, collecting useful information, and keeping it all organized. The app that replaces this should be a planning companion first, not a booking tool or a calendar.
+1. **Edycja i usuwanie wszystkiego** — obecnie nie da się edytować/usunąć wielu encji z UI mimo że DAO wspiera pełny CRUD
+2. **Wyszukiwanie nazw na mapie** — map picker działa tylko przez tap, nie można wyszukać "Luwr, Paryż"
+3. **Android Auto** — dostęp do planu z poziomu deski rozdzielczej samochodu
+4. **GPS notifications** — geofencing alerty gdy użytkownik jest blisko zapisanej atrakcji
+5. **AI suggestions** — rekomendacje atrakcji przez OpenRouter API na podstawie kontekstu podróży
+
+Change type: nowe moduły (każdy feature jako osobny slice). Rdzeń aplikacji (timeline engine, CRUD, offline-first) pozostaje bez zmian.
+
+Insight: to nie domysły — to experience gaps z używania apki. Użytkownik wie czego brakuje bo sam planuje podróże.
 
 ## User & Persona
 
-**Primary persona**: A solo leisure traveler — someone planning a road trip, a short city break, or a longer vacation for themselves (possibly with friends or family, but planning alone). They research across multiple sources, collect ideas, and want to assemble the best version of their trip. They need the plan accessible both during planning and in the moment — quick look-up of what's next, where it is, and why they picked it.
+Ta sama persona co MVP: solo leisure traveler planujący własne wyjazdy — city break, road trip, dłuższe wakacje. Jedna osoba, jeden trip na raz, dane lokalnie na urządzeniu.
 
 ## Access Control
 
-Local profile only — no login, no account creation. All trip data lives on-device. Single user, no role separation. MVP does not include cloud sync or multi-device support; those may be added in a future version.
+Bez zmian — local profile only, no login, no account creation. Wszystkie dane na urządzeniu. AI API użyje klucza OpenRouter per-instancja (nie per-user).
 
 ## Success Criteria
 
 ### Primary
 
-- A traveler can create a trip (name, destination, dates), add attractions, and receive a day-by-day plan that accounts for: time per attraction, sleep/wake-up windows, travel between stops, and a realism check that warns when a day is overstuffed. The traveler can review and adjust the plan.
+**S-07 (edycja + usuwanie):** Użytkownik może edytować każdą encję z poziomu UI — nazwę/destynację/daty tripa, nazwę/czas/kategorię atrakcji — oraz usunąć dowolny trip, atrakcję lub override z potwierdzeniem.
+
+**S-08 (wyszukiwanie na mapie):** Użytkownik wpisuje nazwę miejsca w map pickerze → dostaje listę wyników → klika → mapa przesuwa się i stawia pinezkę.
+
+**S-11 (AI suggestions — następny slice):** Użytkownik klika "Suggest attractions" dla tripa → apka wysyła kontekst do OpenRouter → dostaje rekomendacje → może dodać wybrane do planu.
 
 ### Secondary
 
-- Attraction categorization by type (e.g., museum, restaurant, nature, landmark) — the traveler can filter or scan the plan by category.
+- S-07: Edycja atrakcji inline z poziomu timeline (bez otwierania osobnego dialogu)
+- S-08: Cache wyników geocodingu lokalnie (offline fallback)
 
 ### Guardrails
 
-- **No data loss**: trip data persists reliably. If the app crashes or the phone restarts, all saved trips, attractions, and plans are intact.
-- **Overstuffing always flagged**: if a day's planned activities exceed the available waking hours, the app must warn the user — silently accepting an impossible schedule is a regression.
-- **Prioritization visible**: the traveler can mark attractions as must-have vs. optional, and the plan reflects the distinction — must-have items are never silently dropped from an overstuffed day.
+- **No data loss**: wszystkie operacje delete muszą mieć potwierdzenie. FK cascade działa jak w MVP.
+- **Offline core zachowany**: edycja/dodawanie działa bez internetu. Tylko map search i AI wymagają połączenia.
+- **Istniejący timeline engine nietknięty**: żaden z nowych feature'ów nie zmienia algorytmu computeTimeline.
 
 ## Functional Requirements
 
-### Trip Management
+### S-07: Edycja i usuwanie
 
-- FR-001: User can create a trip with name, destination, and optionally a date range. Priority: must-have
-  > Socrates: Counter-argument considered: "requiring a date range blocks aspirational/someday planning." Resolution: date range made optional.
-- FR-002: User can view a list of all saved trips, sorted by date (upcoming first), with search. Priority: must-have
-  > Socrates: Counter-argument considered: "a flat list doesn't scale past ~5 trips." Resolution: sort by date + search added.
+- FR-001: User can edit trip name, destination, dates, pace, and travel context inline from the trip list. Priority: must-have. Change: new
+  > Socrates: Counter-argument considered: "editing from detail screen adds visual noise." Resolution: inline edit on trip list — faster access, no extra navigation.
+- FR-002: User can edit attraction name, duration, category, and priority inline from the timeline. Priority: must-have. Change: new
+  > Socrates: Counter-argument considered: "timeline is already interactive (reorder, move, delete) — adding edit makes it crowded." Resolution: kept; edit is the missing piece, and timeline already has the interaction pattern.
+- FR-003: User can delete a trip with a confirmation dialog. Deleting a trip cascades to all its attractions and overrides. Priority: must-have. Change: new
+  > Socrates: Counter-argument considered: "SnackBar with Undo is faster UX than confirmation dialog." Resolution: kept confirmation dialog — simpler, consistent with existing delete patterns. Undo can be added later.
+- FR-004: User can delete an attraction from the timeline with a confirmation dialog. Priority: must-have. Change: new
+  > Socrates: Same as FR-003 — confirmation dialog for consistency.
+- FR-005: User can reset manual overrides for a day (remove all locks/reorders). Priority: nice-to-have. Change: new
+  > Socrates: Counter-argument considered: "resetting overrides is rare — user can undo manually." Resolution: kept as nice-to-have; useful for 'give me back the original plan' scenario.
 
-### Attractions & Plan Building
+### S-08: Wyszukiwanie na mapie
 
-- FR-003: User can add an attraction to a trip (name, type/category, estimated visit duration). Priority: must-have
-  > Socrates: Counter-argument considered: "requiring the user to estimate duration for every attraction is tedious; provide smart defaults." Resolution: kept user-provided — duration is the core scheduling input and must be accurate.
-- FR-004: App fills in a day-by-day timeline based on the user's ordered list of stops — assigning start times, accounting for visit durations, wake-up/sleep windows, and travel between stops. Priority: must-have
-  > Socrates: Counter-argument considered: "auto-sequencing without location data or opening hours produces bad plans." Resolution: the user orders the stops; the app fills in times — no automatic reordering.
-- FR-005: App flags when a day's plan is overstuffed (exceeds available waking hours). Priority: must-have
-  > Socrates: Counter-argument considered: "flagging without suggesting a fix leaves the user stuck." Resolution: kept flag-only for MVP — the user knows their own priorities.
-
-### Organization & Review
-
-- FR-006: User can mark an attraction with a three-tier priority level. Priority: must-have
-  > Socrates: Counter-argument considered: "binary must-have/optional is too coarse — travelers have shades of priority." Resolution: expanded to three-tier priority.
-- FR-007: User can categorize attractions by type, using a predefined list plus a free-text tag. Priority: nice-to-have
-  > Socrates: Counter-argument considered: "hardcoded categories might not match how travelers think (e.g., 'rainy day', 'free entry')." Resolution: predefined list + free-text tag for flexibility.
-- FR-008: User can review the full plan, day by day, and manually adjust (reorder, remove, add items). Manual edits survive timeline recalculation. Priority: must-have
-  > Socrates: Counter-argument considered: "manual edits could be wiped when the plan recalculates after adding or removing an attraction." Resolution: manual edits must survive recalculation — user changes are preserved unless explicitly reset.
-
-## User Stories
-
-### US-01: Traveler builds a day-by-day plan from attractions
-
-- **Given** a traveler has created a trip "Rome City Break" for June 10–12 and ordered 5 attractions (Colosseum, Vatican, Trastevere walk, Pantheon, dinner in Testaccio), each with a category and estimated visit time
-- **When** the app fills in the timeline
-- **Then** the plan is divided across 3 days, with wake-up ~8am and sleep ~11pm, each attraction placed in the user's specified order with travel time between stops accounted for, and a warning displayed if any day exceeds ~13 waking hours
+- FR-006: User can type a place name in the map picker and see a list of matching results. Priority: must-have. Change: new
+  > Socrates: Counter-argument considered: "geocoding requires API key + internet, violating offline-first." Resolution: kept; geocoding is opt-in, offline fallback exists (FR-008).
+- FR-007: User can tap a search result to move the map to that location and drop a pin. Priority: must-have. Change: new
+  > Socrates: Counter-argument considered: none. Standard map picker UX.
+- FR-008: Map search falls back to manual coordinate entry when offline. Priority: must-have. Change: new
+  > Socrates: Counter-argument considered: "offline fallback is just S-06 manual entry." Resolution: kept; the fallback path already exists — no new UX, just graceful degradation.
 
 ## Business Logic
 
-The app computes whether a day-by-day trip plan is realistically achievable, given the traveler's ordered stops, estimated visit durations, travel pace preference, and available waking hours — flagging impossible schedules before they become a problem.
+No domain logic change for S-07 and S-08. These are UI/infrastructure changes:
+- S-07: exposes existing CRUD capabilities in the UI — DAO already supports all operations
+- S-08: adds geocoding lookup (standard search, not recommendations) — user searches, app finds locations
 
-**Inputs** (user-facing):
-- The traveler's ordered list of attractions with estimated visit durations
-- A travel pace preference set at trip creation: intensive (longer days, tighter margins) or relaxing (shorter days, more buffer)
-- Default sleep and wake windows, adjusted by the pace preference (e.g., intensive: 7am–11pm / 16h; relaxing: 10am–8pm / 10h)
-- Estimated travel time between consecutive stops (derived from location distance, or a flat default if location data is unavailable)
-
-**Output**: A day-by-day timeline with each attraction placed at a computed start time. Days where the sum of visit durations + travel gaps exceeds the waking window are flagged as overstuffed. Flagged days display a warning; must-have items are highlighted so the traveler knows which items to protect when adjusting.
-
-**How the user encounters it**: The traveler creates a trip, sets the pace, orders their attractions, and the app fills in the timeline. Overstuffed days show a visible warning. The traveler can then adjust — reorder, remove optional items, move items to another day, or switch the pace. Manual edits are preserved through recalculation.
+The existing timeline engine rule ("compute whether a day's plan is feasible") is unchanged. AI-powered suggestions (new domain rule: "app recommends attractions based on trip context") belong to S-11 (OpenRouter).
 
 ## Non-Functional Requirements
 
-- **Responsive UI**: any user tap produces visible feedback within 200ms. Any operation lasting longer than 2 seconds shows continuous progress.
-- **On-device data**: all trip data stays on-device by default. No analytics, no telemetry, no network calls that expose trip content without the user's explicit action.
-- **Android 10+ (API 29+)**: the app runs on Android 10 and above, covering the vast majority of active Android devices.
-- **Offline core**: core trip planning (creating a trip, adding attractions, viewing/editing the plan) works fully without a network connection. Online features (e.g., fetching Wikipedia info, booking links) are bonus and degrade gracefully when offline.
+- **Responsive UI**: edit/delete operations produce visible feedback within 200ms. Geocoding results appear within 2s or show progress indicator.
+- **Offline core preserved**: all CRUD operations work offline. Only map search requires internet (with manual fallback per FR-008).
+- **No data loss**: delete operations cascade correctly (existing FK constraints). Confirmation dialogs on all destructive actions.
+- **Existing timeline engine untouched**: computeTimeline() and reapplyOverrides() are not modified.
+
+## Constraints & Preserved Behavior
+
+- Existing API contracts preserved: TripDao, AttractionDao, TimelineOverrideDao signatures unchanged. New parameters are additive only.
+- Schema backward-compatible: no migration needed for S-07/S-08 (existing v4 schema supports all CRUD operations).
+- Firebase Crashlytics monitoring continues unchanged.
+- CI pipeline (pr-check.yml, deploy.yml) triggers on both main and develop as before.
 
 ## Non-Goals
 
-- **No booking integration**: the app does not book flights, hotels, or tickets. It may link out to booking sites, but there is no transaction flow, no payment, no reservation management.
-- **No social or sharing features**: no sharing plans with friends, no collaborative planning, no public profiles, no export to social media. This is a solo planning tool.
-- **No cloud sync or multi-device support**: data stays on a single device. No cloud backup, no sync across phone and tablet, no web access. This may be revisited in a future version.
-- **No AI-generated trip plans**: the MVP does not include an AI assistant that generates or suggests attractions or itineraries. The traveler builds the plan manually; the app does the time math.
+- No AI suggestions in this delivery (S-11 — next slice)
+- No Android Auto (S-09)
+- No GPS notifications (S-10)
+- No changes to timeline computation algorithm
+- No new data model entities — existing Trips/Attractions/TimelineOverrides are sufficient
+- No authentication changes — local profile only, same as MVP
 
-## Open Questions
+## First Delivery Scope
 
-1. **Project name** — TBD by user. The working directory is "travelapp" but the product-facing name has not been chosen.
-2. **Three-tier priority labels** — what are the exact three levels? (e.g., must-have / nice-to-have / optional, or high / medium / low). TBD by user before implementation.
-
-## Quality cross-check
-
-All elements present — no gaps. Cross-check passed with `accepted` status.
-
-| Element | Status |
-|---|---|
-| Access Control | present |
-| Business Logic (one-sentence rule) | present |
-| Project artifacts | present |
-| Timeline-cost acknowledged | present (3 weeks) |
-| Non-Goals | present (4 entries) |
-| Preserved behavior | n/a (greenfield) |
-
+S-07 + S-08 w ~3 tygodnie (after-hours). S-11 jako następny slice.
