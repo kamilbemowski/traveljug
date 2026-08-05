@@ -85,9 +85,10 @@ jobs:
             build/app/outputs/flutter-apk/app-release.apk \
             --app "$FIREBASE_APP_ID" \
             --groups "testers" \
-            --release-notes "${{ github.event.head_commit.message }}"
+            --release-notes "$NOTES"
         env:
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          NOTES: ${{ github.event.head_commit.message }}
 
       - name: Create GitHub Release
         if: github.ref == 'refs/heads/main'
@@ -97,7 +98,8 @@ jobs:
           gh release create "$TAG" \
             build/app/outputs/flutter-apk/app-release.apk \
             --title "$TAG" \
-            --notes "${{ github.event.head_commit.message }}" \
+            --notes "$NOTES" \
             --latest
         env:
           GH_TOKEN: ${{ github.token }}
+          NOTES: ${{ github.event.head_commit.message }}
