@@ -62,6 +62,11 @@ android {
             } else {
                 signingConfigs.getByName("debug")
             }
+            // ProGuard rules for flutter_places_sdk (R8 minification compatibility).
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
