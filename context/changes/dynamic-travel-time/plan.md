@@ -244,6 +244,6 @@ Add a "Travel context" dropdown to `CreateTripScreen` next to the "Pace" dropdow
 
 #### Manual
 
-- [ ] 3.3 City tour context shows shorter travel gaps in timeline
-- [ ] 3.4 Road trip context shows longer travel gaps in timeline
-- [ ] 3.5 Existing trips without context default to 30 min
+- [x] 3.3 City tour context shows shorter travel gaps in timeline
+- [x] 3.4 Road trip context shows longer travel gaps in timeline
+- [x] 3.5 Existing trips without context default to 30 min

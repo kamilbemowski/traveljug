@@ -438,50 +438,50 @@ Wire the Maps API key into GitHub Actions so `flutter build apk --debug` succeed
 
 #### Automated
 
-- [ ] 1.1 `dart run build_runner build` succeeds
-- [ ] 1.2 `flutter analyze` passes
-- [ ] 1.3 `flutter test` — all 48 existing tests pass
+- [x] 1.1 `dart run build_runner build` succeeds — 4222682
+- [x] 1.2 `flutter analyze` passes — 4222682
+- [x] 1.3 `flutter test` — all 48 existing tests pass — 4222682
 
 #### Manual
 
-- [ ] 1.4 `Attractions` table has `latitude` / `longitude` RealColumns
-- [ ] 1.5 `schemaVersion = 4` in `app_database.dart`
+- [x] 1.4 `Attractions` table has `latitude` / `longitude` RealColumns
+- [x] 1.5 `schemaVersion = 4` in `app_database.dart`
 
 ### Phase 2: Geo computation — Haversine + detour factor
 
 #### Automated
 
-- [ ] 2.1 `flutter test test/services/geo_utils_test.dart` — all Haversine + detour tests pass
-- [ ] 2.2 `flutter analyze` passes
+- [x] 2.1 `flutter test test/services/geo_utils_test.dart` — all Haversine + detour tests pass — 51a4644
+- [x] 2.2 `flutter analyze` passes — 51a4644
 
 #### Manual
 
-- [ ] 2.3 Haversine returns correct distances for known city pairs
-- [ ] 2.4 Detour factor brackets correct (1.6/1.35/1.2/1.15)
+- [x] 2.3 Haversine returns correct distances for known city pairs
+- [x] 2.4 Detour factor brackets correct (1.6/1.35/1.2/1.15)
 
 ### Phase 3: Timeline integration — per-pair travel time
 
 #### Automated
 
-- [ ] 3.1 `flutter test` — all timeline tests pass (new + existing)
-- [ ] 3.2 `flutter analyze` passes
+- [x] 3.1 `flutter test` — all timeline tests pass (new + existing) — bf858f8
+- [x] 3.2 `flutter analyze` passes — bf858f8
 
 ### Phase 4: Map picker UI
 
 #### Automated
 
-- [ ] 4.1 `flutter analyze` passes
-- [ ] 4.2 `flutter build apk --debug` compiles
+- [x] 4.1 `flutter analyze` passes — 2e94164
+- [x] 4.2 `flutter build apk --debug` compiles — 2e94164
 
 #### Manual
 
-- [ ] 4.3 Full-screen map opens, tap places pin, Confirm fills coords
-- [ ] 4.4 Airplane mode → timeout fallback → "Open in Google Maps" works
-- [ ] 4.5 Clear location button works
-- [ ] 4.6 Mixed attractions (with/without coords) show correct travel gaps
+- [x] 4.3 Full-screen map opens, tap places pin, Confirm fills coords
+- [x] 4.4 Airplane mode → timeout fallback → "Open in Google Maps" works
+- [x] 4.5 Clear location button works
+- [x] 4.6 Mixed attractions (with/without coords) show correct travel gaps
 
 ### Phase 5: CI configuration
 
 #### Automated
 
-- [ ] 5.1 PR check CI passes with Maps API key wired
+- [x] 5.1 PR check CI passes with Maps API key wired — 4ea01d5

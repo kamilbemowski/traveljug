@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Android local properties (API keys, local paths)
+android/app/local.properties
+
 # Miscellaneous
 *.class
 *.log

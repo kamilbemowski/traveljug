@@ -1,5 +1,6 @@
 import '../database/app_database.dart';
 import '../models/timeline_day.dart';
+import 'geo_utils.dart';
 import 'pace_config.dart';
 
 /// Pure-function timeline computation engine.
@@ -23,7 +24,8 @@ class TimelineService {
     final config = parsePace(trip.pace).config;
     final dailyBudget = config.wakingMinutes;
     final baseTravel = travelMinutesForContext(parseTravelContext(trip.travelContext));
-    final effectiveTravel = (baseTravel * config.travelMultiplier).round();
+    final flatTravel = (baseTravel * config.travelMultiplier).round();
+    final speedKmh = speedKmhForContext(parseTravelContext(trip.travelContext));
 
     final days = _dateRange(trip.startDate!, trip.endDate!);
     final timeline = <TimelineDay>[];
@@ -31,10 +33,17 @@ class TimelineService {
 
     var currentSlots = <TimelineSlot>[];
     var currentTotal = 0;
+    Attraction? previousAttr;
 
     for (final attr in attractions) {
       final isFirstInDay = currentSlots.isEmpty;
-      final travelCost = isFirstInDay ? 0 : effectiveTravel;
+      final travelCost = pairTravelMinutes(
+        isFirstInDay ? null : previousAttr,
+        attr,
+        speedKmh: speedKmh,
+        fallbackMinutes: flatTravel,
+        multiplier: config.travelMultiplier,
+      );
       final slotCost = attr.durationMin + travelCost;
 
       if (currentTotal + slotCost <= dailyBudget) {
@@ -42,7 +51,7 @@ class TimelineService {
         currentSlots.add(TimelineSlot(
           attraction: attr,
           startMin: config.wakeHour * 60 + currentTotal + travelCost,
-          travelFromPrevMin: isFirstInDay ? null : effectiveTravel,
+          travelFromPrevMin: isFirstInDay ? null : travelCost,
         ));
         currentTotal += slotCost;
       } else if (dayIndex + 1 < days.length) {
@@ -70,10 +79,11 @@ class TimelineService {
         currentSlots.add(TimelineSlot(
           attraction: attr,
           startMin: config.wakeHour * 60 + currentTotal + travelCost,
-          travelFromPrevMin: isFirstInDay ? null : effectiveTravel,
+          travelFromPrevMin: isFirstInDay ? null : travelCost,
         ));
         currentTotal += slotCost;
       }
+      previousAttr = attr;
     }
 
     // Don't forget the last day.
@@ -91,6 +101,29 @@ class TimelineService {
     return timeline;
   }
 
+  /// Computes travel minutes between two consecutive attractions using
+  /// distance-based estimation when coordinates are available, falling back
+  /// to [fallbackMinutes] otherwise. First-in-day always returns 0.
+  static int pairTravelMinutes(
+    Attraction? prev,
+    Attraction current, {
+    required double speedKmh,
+    required int fallbackMinutes,
+    required double multiplier,
+  }) {
+    if (prev == null) return 0; // first attraction in day
+    final km = detourAdjustedKm(
+      prev.latitude, prev.longitude,
+      current.latitude, current.longitude,
+    );
+    if (km == null) return fallbackMinutes;
+    final baseMinutes = (km / speedKmh * 60).round();
+    final buffered = baseMinutes < kMinPairTravelMin
+        ? kMinPairTravelMin
+        : baseMinutes;
+    return (buffered * multiplier).round();
+  }
+
   /// Reapplies user overrides to the computed timeline.
   /// Each override moves an attraction to a user-specified day and position.
   /// Slots within each day are sorted by their override position.
@@ -102,6 +135,7 @@ class TimelineService {
     Map<int, TimelineOverride> overrides, {
     String pace = 'intensive',
     int baseTravel = kDefaultTravelMinutes,
+    double speedKmh = kDefaultSpeedKmh,
   }) {
     if (overrides.isEmpty) return computed;
     if (computed.isEmpty) return computed;
@@ -150,12 +184,19 @@ class TimelineService {
 
       // Recompute start times and travel gaps.
       final config = parsePace(pace).config;
-      final travel = (baseTravel * config.travelMultiplier).round();
+      final fallback = (baseTravel * config.travelMultiplier).round();
       var currentMin = config.wakeHour * 60;
       var total = 0;
       final adjustedSlots = <TimelineSlot>[];
       for (var i = 0; i < rawSlots.length; i++) {
-        final travelGap = i == 0 ? null : travel;
+        final travelPair = pairTravelMinutes(
+          i == 0 ? null : rawSlots[i - 1].attraction,
+          rawSlots[i].attraction,
+          speedKmh: speedKmh,
+          fallbackMinutes: fallback,
+          multiplier: config.travelMultiplier,
+        );
+        final travelGap = i == 0 ? null : travelPair;
         adjustedSlots.add(TimelineSlot(
           attraction: rawSlots[i].attraction,
           startMin: currentMin + (travelGap ?? 0),

@@ -6,6 +6,7 @@ import '../database/daos/timeline_override_dao.dart';
 import '../database/daos/trip_dao.dart';
 import '../database/tables.dart';
 import '../models/timeline_day.dart';
+import 'map_picker_screen.dart';
 import '../services/pace_config.dart';
 import '../services/timeline_service.dart';
 
@@ -65,10 +66,12 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     final overrideDao = TimelineOverrideDao(db);
     final overrides = await overrideDao.loadOverridesByTrip(widget.trip.id);
     final baseTravel = travelMinutesForContext(parseTravelContext(trip.travelContext));
+    final speedKmh = speedKmhForContext(parseTravelContext(trip.travelContext));
     final timeline = TimelineService.reapplyOverrides(
       computed, overrides,
       pace: trip.pace,
       baseTravel: baseTravel,
+      speedKmh: speedKmh,
     );
 
     setState(() { _trip = trip; _timeline = timeline; _error = null; _loading = false; });
@@ -425,6 +428,9 @@ class _AddAttractionDialogState extends State<_AddAttractionDialog> {
   final _durationController = TextEditingController();
   AttractionCategory _category = AttractionCategory.other;
   int _priority = 1;
+  double? _latitude;
+  double? _longitude;
+  bool _showLocation = false;
 
   @override
   void dispose() {
@@ -444,6 +450,8 @@ class _AddAttractionDialogState extends State<_AddAttractionDialog> {
         durationMin: int.parse(_durationController.text.trim()),
         tripId: widget.tripId, category: _category, priority: _priority,
         position: existing.length,
+        latitude: _latitude,
+        longitude: _longitude,
       );
     } catch (e) {
       if (!mounted) return;
@@ -469,6 +477,38 @@ class _AddAttractionDialogState extends State<_AddAttractionDialog> {
             DropdownButtonFormField<AttractionCategory>(initialValue: _category, decoration: const InputDecoration(labelText: 'Category'), items: AttractionCategory.values.map((c) => DropdownMenuItem(value: c, child: Text(c.name[0].toUpperCase() + c.name.substring(1)))).toList(), onChanged: (v) { if (v != null) setState(() => _category = v); }),
             TextFormField(controller: _durationController, decoration: const InputDecoration(labelText: 'Duration (minutes) *'), keyboardType: TextInputType.number, validator: (v) { if (v == null || v.trim().isEmpty) return 'Duration is required'; final n = int.tryParse(v.trim()); if (n == null || n <= 0) return 'Must be a positive number'; return null; }),
             DropdownButtonFormField<int>(initialValue: _priority, decoration: const InputDecoration(labelText: 'Priority'), items: const [DropdownMenuItem(value: 0, child: Text('Must-have')), DropdownMenuItem(value: 1, child: Text('Nice-to-have')), DropdownMenuItem(value: 2, child: Text('Optional'))], onChanged: (v) { if (v != null) setState(() => _priority = v); }),
+            CheckboxListTile(
+              title: const Text('Add location (optional)', style: TextStyle(fontSize: 14)),
+              value: _showLocation,
+              onChanged: (v) => setState(() => _showLocation = v ?? false),
+              controlAffinity: ListTileControlAffinity.leading,
+              dense: true,
+            ),
+            if (_showLocation) ...[
+              if (_latitude != null && _longitude != null)
+                ListTile(
+                  leading: const Icon(Icons.location_on, color: Colors.green),
+                  title: Text('${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)}'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () => setState(() { _latitude = null; _longitude = null; }),
+                  ),
+                  dense: true,
+                ),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final pos = await MapPickerScreen.show(context);
+                  if (pos != null && mounted) {
+                    setState(() {
+                      _latitude = pos.latitude;
+                      _longitude = pos.longitude;
+                    });
+                  }
+                },
+                icon: const Icon(Icons.map),
+                label: const Text('Pick on map'),
+              ),
+            ],
           ],
         ),
       ),
