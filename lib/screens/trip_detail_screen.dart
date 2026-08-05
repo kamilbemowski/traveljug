@@ -339,6 +339,36 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     _loadTimeline();
   }
 
+  Future<void> _handleResetDay(int dayIndex) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reset day?'),
+        content: const Text('Remove all manual adjustments for this day and restore the original computed plan?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Reset')),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    try {
+      final db = await getDatabase();
+      final dao = TimelineOverrideDao(db);
+      for (final slot in _timeline[dayIndex].slots) {
+        await dao.deleteOverride(slot.attraction.id);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to reset day. Please try again.')),
+      );
+      return;
+    }
+    _loadTimeline();
+  }
+
   Future<void> _handleDelete(int slotIndex, int dayIndex) async {
     final slot = _timeline[dayIndex].slots[slotIndex];
     final confirm = await showDialog<bool>(
@@ -447,6 +477,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                 onMoveDay: (slotIdx, dir) => _handleMoveDay(index, slotIdx, dir),
                 onDelete: (slotIdx) => _handleDelete(slotIdx, index),
                 onEdit: (slotIdx) => _handleEditAttraction(index, slotIdx),
+                onReset: () => _handleResetDay(index),
               );
             },
           ),
@@ -480,6 +511,7 @@ class _DaySection extends StatefulWidget {
   final void Function(int slotIndex, int direction) onMoveDay;
   final void Function(int slotIndex) onDelete;
   final void Function(int slotIndex) onEdit;
+  final VoidCallback onReset;
 
   const _DaySection({
     super.key,
@@ -491,6 +523,7 @@ class _DaySection extends StatefulWidget {
     required this.onMoveDay,
     required this.onDelete,
     required this.onEdit,
+    required this.onReset,
   });
 
   @override
@@ -532,6 +565,12 @@ class _DaySectionState extends State<_DaySection> {
               children: [
                 Expanded(
                   child: Text('Day ${widget.dayNumber} — $dateStr', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.restore, size: 20),
+                  tooltip: 'Reset day',
+                  onPressed: widget.onReset,
+                  visualDensity: VisualDensity.compact,
                 ),
                 IconButton(
                   icon: Icon(_keepTogether ? Icons.lock : Icons.lock_open, size: 20),

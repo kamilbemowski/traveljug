@@ -267,8 +267,8 @@ No migration needed. Schema unchanged at v4. All DAO methods already exist and a
 
 #### Automated
 
-- [ ] 3.1 `flutter analyze` passes
-- [ ] 3.2 `flutter test` — all existing tests pass
+- [x] 3.1 `flutter analyze` passes
+- [x] 3.2 `flutter test` — all existing tests pass
 
 #### Manual
 
