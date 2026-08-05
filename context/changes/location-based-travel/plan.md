@@ -475,10 +475,10 @@ Wire the Maps API key into GitHub Actions so `flutter build apk --debug` succeed
 
 #### Manual
 
-- [ ] 4.3 Full-screen map opens, tap places pin, Confirm fills coords
-- [ ] 4.4 Airplane mode → timeout fallback → "Open in Google Maps" works
-- [ ] 4.5 Clear location button works
-- [ ] 4.6 Mixed attractions (with/without coords) show correct travel gaps
+- [x] 4.3 Full-screen map opens, tap places pin, Confirm fills coords
+- [x] 4.4 Airplane mode → timeout fallback → "Open in Google Maps" works
+- [x] 4.5 Clear location button works
+- [x] 4.6 Mixed attractions (with/without coords) show correct travel gaps
 
 ### Phase 5: CI configuration
 
