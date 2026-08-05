@@ -28,7 +28,7 @@ TravelJug jest dziś kalkulatorem intensywności podróży — oblicza timeline,
 
 | ID    | Change ID        | Outcome (user can …)                                          | Prerequisites | PRD refs                       | Status   |
 | ----- | ---------------- | ------------------------------------------------------------- | ------------- | ------------------------------ | -------- |
-| S-08  | map-search       | search for places by name in the map picker and pin results   | S-06          | FR-006, FR-007, FR-008         | blocked  |
+| S-08  | map-search       | search for places by name in the map picker and pin results   | S-06          | FR-006, FR-007, FR-008         | implementing |
 | S-07  | edit-delete-everything | edit and delete every entity — trips, attractions, overrides — from the UI | —             | FR-001, FR-002, FR-003, FR-004, FR-005 | ready    |
 
 ## Streams
@@ -57,17 +57,17 @@ What's already in place in the codebase as of 2026-08-05 (znane z projektu).
 
 ### S-08: Map Search (geocoding)
 
-- **Outcome:** user can type a place name in the map picker, see matching results, tap one to move the map and drop a pin. Falls back to manual coordinate entry when offline.
+- **Outcome:** user can type a place name in the map picker, see matching autocomplete predictions with names and addresses, tap one to move the map and drop a pin. Places name is returned to the attraction form. Falls back to manual coordinate entry when offline.
 - **Change ID:** map-search
 - **PRD refs:** FR-006, FR-007, FR-008
 - **Prerequisites:** S-06 (map picker must exist — ✅ done)
 - **Parallel with:** S-07 (edit-delete-everything)
 - **Blockers:** —
 - **Unknowns:**
-  - Geocoding provider: Google Geocoding API ($5/1k po 10k free) vs OSM Nominatim (free, 1 req/s)? — Owner: dev. Block: yes.
-  - Cache strategy for geocoding results? — Owner: dev. Block: no (nice-to-have, can be added post-MVP).
-- **Risk:** Niski — map picker już istnieje, geocoding to dodatkowa warstwa. Jedynym ryzykiem jest wybór providera — trzeba rozstrzygnąć przed `/10x-plan`.
-- **Status:** blocked (do czasu wyboru geocoding providera)
+  - ~~Geocoding provider~~ → Resolved: `flutter_places_sdk` (native Google Places SDK). Free tier: 10k autocomplete + 10k details/month.
+  - ~~Cache strategy~~ → Resolved: in-memory `LinkedHashMap`, 50 entries, LRU eviction.
+- **Risk:** Niski — map picker już istnieje. Implementacja zmergowana na `develop`, wszystkie testy przechodzą (74). Manual verification pending — potrzebny emulator/device Android.
+- **Status:** implementing
 
 ### S-07: Edit & Delete Everything
 

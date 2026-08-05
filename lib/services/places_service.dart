@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_places_sdk/flutter_places_sdk.dart';
 
@@ -6,12 +8,19 @@ import 'package:flutter_places_sdk/flutter_places_sdk.dart';
 /// Uses the native Android/iOS Places SDK (not HTTP), so the API key's
 /// application restriction (package name + SHA-1 fingerprint) works.
 ///
-/// Pricing (Places API New, per 1k):
-///   - Autocomplete: $2.83 (free within a session ending in fetchPlace)
+/// Pricing (Places API New, per 1k requests):
+///   - Autocomplete: $2.83  (billed per call; no session token implemented)
 ///   - Place Details Essentials: $5.00
 ///   - Free tier: 10,000 autocomplete + 10,000 details per month
 class PlacesService {
   final FlutterPlacesSdk _sdk;
+
+  /// In-memory cache for autocomplete results.  Keyed by lowercased query,
+  /// evicts eldest entry when over [_maxCacheSize].
+  final LinkedHashMap<String, List<AutocompletePrediction>> _cache =
+      LinkedHashMap<String, List<AutocompletePrediction>>();
+
+  static const int _maxCacheSize = 50;
 
   PlacesService({String? apiKey})
       : _sdk = FlutterPlacesSdk(apiKey ?? kPlacesApiKey);
@@ -19,18 +28,36 @@ class PlacesService {
   bool get isAvailable => _sdk.apiKey.isNotEmpty;
 
   /// Autocomplete — returns predictions with place names and IDs.
-  /// Uses native Places SDK (not HTTP).
+  /// Uses native Places SDK (not HTTP).  Results are cached in memory
+  /// for the session — repeat queries return instantly.
   Future<List<AutocompletePrediction>> autocomplete(String query) async {
     if (!isAvailable) return [];
+
+    final key = query.toLowerCase().trim();
+    final cached = _cache[key];
+    if (cached != null) return cached;
+
     try {
-      return await _sdk.findAutocompletePredictions(query);
+      final results = await fetchPredictions(query);
+      _cache[key] = results;
+      if (_cache.length > _maxCacheSize) {
+        _cache.remove(_cache.keys.first);
+      }
+      return results;
     } on PlacesException catch (e) {
       debugPrint('Places SDK autocomplete error ($e): ${e.message}');
-      return [];
-    } catch (e) {
-      debugPrint('Places SDK autocomplete error: $e');
-      return [];
+      rethrow;
     }
+  }
+
+  /// Clears the autocomplete cache.  Used in tests.
+  void clearCache() => _cache.clear();
+
+  /// Calls the native SDK for autocomplete predictions.
+  /// Overridable so tests can intercept without hitting the real SDK.
+  @visibleForTesting
+  Future<List<AutocompletePrediction>> fetchPredictions(String query) async {
+    return _sdk.findAutocompletePredictions(query);
   }
 
   /// Place Details — returns coordinates and display name for a place_id.
@@ -42,11 +69,11 @@ class PlacesService {
         placeId,
         fields: [PlaceField.location, PlaceField.name],
       );
-      if (place == null) return null;
+      if (place == null || place.latLng == null) return null;
       return PlaceDetails(
         name: place.name ?? '',
-        latitude: place.latLng?.lat ?? 0,
-        longitude: place.latLng?.lng ?? 0,
+        latitude: place.latLng!.lat,
+        longitude: place.latLng!.lng,
       );
     } on PlacesException catch (e) {
       debugPrint('Places SDK details error ($e): ${e.message}');

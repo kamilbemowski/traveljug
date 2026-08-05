@@ -2,27 +2,29 @@
 
 ## Overview
 
-Add a search bar with geocoding to the existing `MapPickerScreen`. User types a place name (minimum 3 characters), sees matching results as a dropdown overlay above the map, taps a result to move the map and drop a pin. Uses Flutter Geocoding plugin (free, no API key, native Android geocoder via Google Play Services). Existing tap-to-place and timeout fallback behaviors are preserved.
+Add a search bar with Place autocomplete to the existing `MapPickerScreen`. User types a place name (minimum 3 characters), sees matching predictions as a dropdown overlay above the map, taps a result → fetches place details (coordinates + name) → map animates to position, pin appears, Confirm returns both coordinates AND the place name. Uses `flutter_places_sdk` (native Google Places SDK). Existing tap-to-place and timeout fallback behaviors are preserved.
+
+> **Implementation note (2026-08-05):** The implementation used `flutter_places_sdk` (Google Places SDK native) instead of the `geocoding` package originally considered. This gives richer results — place names, autocomplete predictions, and structured addresses — at the cost of requiring a Google API key. The free tier covers 10,000 autocomplete + 10,000 details per month.
 
 ## Current State Analysis
 
-- `lib/screens/map_picker_screen.dart` (152 lines) — full-screen map picker with GoogleMap widget, tap-to-place pin, 5-second timeout fallback to manual coordinate entry. No search functionality.
-- `lib/screens/trip_detail_screen.dart:703-806` — `_AddAttractionDialog` calls `MapPickerScreen.show(context)` and receives `LatLng?`.
-- `google_maps_flutter: ^2.18.0` already in `pubspec.yaml` — map rendering and marker API.
-- Package `geocoding: ^4.0.0` by Baseflow needed — uses Android's native Geocoder (Google Play Services), free, no API key.
+- `lib/screens/map_picker_screen.dart` (362 lines) — full-screen map picker with GoogleMap widget, tap-to-place pin, search bar with autocomplete, predictions overlay, 5-second timeout fallback to manual coordinate entry.
+- `lib/services/geocoding_service.dart` (113 lines) — `PlacesService` wrapping `flutter_places_sdk`, with in-memory session cache (LinkedHashMap, 50 entries, LRU eviction), test injection via `setTestPlacesService()`.
+- `lib/screens/trip_detail_screen.dart` — both `_AddAttractionDialog` and `_EditAttractionDialog` call `MapPickerScreen.show(context, searchQuery: ...)` and receive `MapPickerResult` (coordinates + name).
+- `flutter_places_sdk: ^0.1.0` in `pubspec.yaml`. API key injected via `--dart-define=MAPS_API_KEY=...`.
+- `google_maps_flutter: ^2.18.0` — map rendering and marker API.
 - No schema changes needed. No DAO or timeline engine changes.
 
-### Key Discoveries:
+### Key Design Decisions:
 
-- `MapPickerScreen._position` (line 27) — the existing pin state. Search results will set this directly.
-- `MapPickerScreen._timedOut` (line 29) — when true, switches to fallback view. Search bar is hidden in fallback mode.
-- `_AddAttractionDialogState._showLocation` (line 798 in trip_detail_screen.dart) — controls whether map picker button is visible. Integration point unchanged.
-- `Geocoding().locationFromAddress()` returns `List<Location>` — Android Geocoder API via Play Services. `Location` has `latitude`, `longitude`, `timestamp`.
-- `Geocoder.isPresent()` (Android only) — checks Play Services availability before calling geocoder.
+- **`MapPickerResult`** (not bare `LatLng`) — carries both `coordinates` and `name` so the attraction dialog can pre-fill the place name.
+- **`PlacesService` singleton** — `getPlacesService()` for production, `setTestPlacesService()` for tests (matching the `setTestDatabase()` pattern).
+- **`searchQuery` parameter** — `MapPickerScreen.show(context, searchQuery: ...)` pre-fills the search bar. Both add/edit attraction dialogs pass the current name text.
+- **`@visibleForTesting fetchPredictions()`** — overridable hook so cache tests can intercept SDK calls without mocking the native layer.
 
 ## Desired End State
 
-User opens MapPickerScreen → sees search field at top of map → types "wieża eiffla" (min 3 chars) → after 300ms pause, overlay shows matching results → taps first result → map animates to `48.8584, 2.2945`, pin appears → Confirm returns coordinates. If geocoder unavailable, inline message suggests manual coordinate entry. Results cached in memory for the session — repeat searches are instant.
+User opens MapPickerScreen → sees search field at top of map → types "wieża eiffla" (min 3 chars) → after 300ms pause, overlay shows autocomplete predictions with place names and addresses → taps first result → SDK fetches place details → map animates to coordinates, pin appears → Confirm returns `MapPickerResult(coordinates, name)`. If API key missing, inline message suggests manual coordinate entry. Results cached in memory for the session — repeat searches are instant.
 
 ## What We're NOT Doing
 
@@ -30,18 +32,19 @@ User opens MapPickerScreen → sees search field at top of map → types "wieża
 - No reverse geocoding (coordinates → address)
 - No autocomplete suggestions while typing (only search after 3+ chars)
 - No separate search screen — everything happens on the map
-- No changes to `_AddAttractionDialog` or any other screen
-- No Google Geocoding API key or billing setup
-- No OSM Nominatim fallback (Flutter Geocoding only)
+- No changes to `_AddAttractionDialog` or `_EditAttractionDialog` beyond passing `searchQuery`
+- No OSM Nominatim fallback (Google Places SDK only)
 
 ## Implementation Approach
 
-Single phase — one screen modification. Add search bar + results overlay + geocoding call + session cache to `MapPickerScreen`. Use Flutter Geocoding plugin which talks to Android's native Geocoder (free, already present via Play Services). No new files beyond tests. Mock the geocoding layer in widget tests.
+Single phase — one screen modification + one service file. Add search bar + predictions overlay + place-details fetch + session cache to `MapPickerScreen`. Use `flutter_places_sdk` which talks to the native Android/iOS Places SDK. One new service file (`geocoding_service.dart`), one new test file.
 
 ## Critical Implementation Details
 
 - **Timing & lifecycle**: The search debounce timer (300ms) must be cancelled in `dispose()` alongside the existing timeout timer. Two timers, both need cleanup.
-- **State sequencing**: Search field must be hidden when `_timedOut == true` (fallback mode shows manual entry UI, not map). Check `_timedOut` before rendering search bar and before calling geocoder.
+- **State sequencing**: Search field must be hidden when `_timedOut == true` (fallback mode shows manual entry UI, not map). Check `_timedOut` before rendering search bar and before calling Places SDK.
+- **API key**: Injected at build time via `--dart-define=MAPS_API_KEY=...`. The `String.fromEnvironment('MAPS_API_KEY')` call returns `''` when not set — `PlacesService.isAvailable` checks for empty key.
+- **ProGuard**: Release builds need `-keep` rules for `flutter_places_sdk` native bindings (added in `android/app/proguard-rules.pro`).
 
 ---
 
@@ -49,30 +52,35 @@ Single phase — one screen modification. Add search bar + results overlay + geo
 
 ### Overview
 
-Add search field + results overlay + in-memory cache to the existing map picker. User can find places by name and pin them on the map. Existing tap-to-place and timeout fallback preserved.
+Add search field + predictions overlay + place-details fetch + in-memory cache to the existing map picker. User can find places by name, see structured results (name + address), and pin them on the map. Existing tap-to-place and timeout fallback preserved.
 
 ### Changes Required:
 
-#### 1. Add geocoding dependency
+#### 1. Add flutter_places_sdk dependency
 
 **File**: `pubspec.yaml`
 
-**Intent**: Add the `geocoding` Flutter package for native Android geocoding.
+**Intent**: Add `flutter_places_sdk` for native Google Places autocomplete and place details.
 
-**Contract**: Add `geocoding: ^4.0.0` under dependencies, next to `google_maps_flutter`.
+**Contract**: Add `flutter_places_sdk: ^0.1.0` under dependencies.
 
-#### 2. Create GeocodingService wrapper
+#### 2. Create PlacesService wrapper
 
 **File**: `lib/services/geocoding_service.dart` (new file)
 
-**Intent**: Wrap the `geocoding` package in a service class so the geocoder can be mocked in tests. Matches the existing pattern in `lib/services/timeline_service.dart` (stateless service with static or instance methods). Also encapsulates the in-memory cache.
+**Intent**: Wrap `flutter_places_sdk` in a service class so the SDK can be mocked in tests. Matches the existing pattern in `lib/services/timeline_service.dart`. Also encapsulates the in-memory session cache.
 
 **Contract**:
-- Class `GeocodingService` with method `Future<List<GeocodingLocation>> search(String query)`.
-- Internally calls `Geocoding().locationFromAddress(query)`.
-- Maintains `_cache: LinkedHashMap<String, List<GeocodingLocation>>`, capped at 50 entries (evict eldest on insert when full).
-- `GeocodingLocation` is a simple data class with `latitude: double` and `longitude: double` (decouples from the `geocoding` package's `Location` type).
-- For tests: add a module-level `setTestGeocodingService(GeocodingService service)` function + `_instance` static, mirroring the `setTestDatabase()` / `getDatabase()` pattern.
+- Class `PlacesService` with:
+  - `autocomplete(String query)` → `Future<List<AutocompletePrediction>>` — SDK autocomplete with cache check/store
+  - `details(String placeId)` → `Future<PlaceDetails?>` — fetch place coordinates + name
+  - `fetchPredictions(String query)` → overridable hook for tests
+  - `clearCache()` — for test cleanup
+  - `isAvailable` — checks API key is non-empty
+- Cache: `LinkedHashMap<String, List<AutocompletePrediction>>` keyed by lowercased query, capped at 50 entries, evicts eldest on overflow
+- `PlaceDetails` data class with `name`, `latitude`, `longitude`
+- `kPlacesApiKey` const from `String.fromEnvironment('MAPS_API_KEY')`
+- Singleton: `getPlacesService()`, `setTestPlacesService()`, `clearTestPlacesService()`
 
 #### 3. Add search bar to the map view
 
@@ -81,77 +89,101 @@ Add search field + results overlay + in-memory cache to the existing map picker.
 **Intent**: Add a search `TextField` at the top of the map view (hidden when `_timedOut`). Uses a `Timer`-based 300ms debounce. Minimum 3 characters to trigger search.
 
 **Contract**:
-- New fields: `_searchController: TextEditingController`, `_searchTimer: Timer?`, `_searchResults: List<GeocodingLocation>`, `_searching: bool`
-- New widget: `_buildSearchBar()` — returns `TextField` with `InputDecoration(hintText: 'Search for a place...', prefixIcon: Icon(Icons.search))`, embedded in a `Padding` above the map in `_buildMap()` using a `Stack` + `Positioned`
-- Cache lives inside `GeocodingService` (see Change 2) — not in the screen state.
-- `onChanged`: clear previous timer, set new 300ms timer, on fire: if `text.length >= 3`, call `_performSearch(text)`
-- `_performSearch(String query)`: calls `GeocodingService().search(query)` → `setState(() => _searchResults = locations)`
+- New fields: `_searchController`, `_searchTimer`, `_predictions: List<AutocompletePrediction>`, `_searching: bool`, `_searchError: String?`, `_selectedName: String?`
+- `_buildSearchBar()` — `Card` with `TextField`, search icon prefix, clear button / spinner suffix
+- `onChanged`: clear timer, if `length >= 3` set 300ms debounce → `_performSearch(text)`
+- `_performSearch(query)`: calls `getPlacesService().autocomplete(query)` → `setState`
+- `initState()`: pre-fill search if `widget.searchQuery` is provided, trigger delayed search
 - `dispose()`: cancel `_searchTimer`, dispose `_searchController`
 
-#### 4. Add results overlay dropdown
+#### 4. Add predictions overlay dropdown
 
 **File**: `lib/screens/map_picker_screen.dart` (`_MapPickerScreenState`)
 
-**Intent**: When search results exist, show them as a `ListView` overlay below the search field, floating above the map. Tapping a result moves the map and sets the pin.
+**Intent**: When predictions exist, show them as a `ListView` overlay below the search field. Tapping a result fetches place details, moves the map, and sets the pin.
 
 **Contract**:
-- New widget: `_buildResultsOverlay()` — returns a `Positioned` `Card` with `ListView` of `ListTile`s. Each tile shows result name (from `Location.latitude, Location.longitude`). Max 5 results visible, scrollable if more.
-- `onTap` per tile: `setState(() { _position = LatLng(loc.latitude, loc.longitude); _searchResults = []; });` — clears results, sets pin. Then call `_controller.animateCamera(CameraUpdate.newLatLng(...))` to move map.
-- `_controller: GoogleMapController?` — new field, obtained from `GoogleMap.onMapCreated` callback (already exists at line 97, just capture the controller).
-- Overlay appears only when `_searchResults.isNotEmpty`.
-- Extend existing `onTap` callback on `GoogleMap` (line 100) to also set `_searchResults = []` — dismissing the overlay when the user taps the map directly.
+- `_buildPredictionsOverlay()` — `Positioned` `Card` with `ListView.builder`, each tile shows `primaryText` + `secondaryText` + location icon
+- `onTap` → `_onPredictionTap(prediction)`:
+  1. Sets `_searching = true`, clears predictions
+  2. Calls `getPlacesService().details(prediction.placeId)`
+  3. Sets `_position`, `_selectedName`, `_searchController.text`
+  4. Animates camera via `_controller.animateCamera(CameraUpdate.newLatLngZoom(latLng, 15))`
+  5. Sets `_searching = false`
+- Map tap also clears predictions (`onTap: ... { _predictions = []; }`)
 
-#### 5. Add geocoder availability check and error handling
+#### 5. MapPickerResult (named result)
 
-**File**: `lib/screens/map_picker_screen.dart` (`_MapPickerScreenState`)
+**File**: `lib/screens/map_picker_screen.dart`
 
-**Intent**: Before searching, check if the geocoder is available. Show inline error messages for failures.
+**Intent**: Return both coordinates and place name so the attraction dialog can pre-fill the name field. Replaces bare `LatLng` return.
 
 **Contract**:
-- In `initState()`: call `Geocoding().isPresent()` and store result in `_geocoderAvailable: bool`.
-- In `_performSearch()`: if `!_geocoderAvailable`, set `_searchError = 'Geocoding not available. Enter coordinates manually.'` and return.
-- New field `_searchError: String?` — shown as `Text` below search field when non-null. Cleared on next keystroke.
-- On `locationFromAddress()` exception: set `_searchError = 'Failed to find places. Check your connection.'`.
+- Class `MapPickerResult` with `coordinates: LatLng` and `name: String`
+- `show()` returns `Future<MapPickerResult?>` and accepts optional `searchQuery`
+- `_confirm()` pops with `MapPickerResult(coordinates: result, name: _selectedName ?? '')`
 
-#### 6. Hide search UI when map times out
+#### 6. Error handling and availability
 
-**File**: `lib/screens/map_picker_screen.dart` (`_MapPickerScreenState`)
+**File**: `lib/screens/map_picker_screen.dart`
 
-**Intent**: When the map fails to load (existing 5-second timeout), hide the search bar. The fallback view already shows manual coordinate entry — search is irrelevant when there's no map.
+**Intent**: Check Places SDK availability before searching. Show inline error messages for failures.
 
-**Contract**: In `_buildMap()`: wrap the search bar + overlay in `if (!_timedOut)`. The existing `_timedOut` check at line 87 already switches between `_buildMap()` and `_buildFallback()`.
+**Contract**:
+- In `_performSearch()`: check `getPlacesService().isAvailable`, show error if unavailable
+- On empty results: show "No places found."
+- On exception: show "Failed to search. Check your connection."
+- On failed place details: show "Could not load place details. Try again."
+- `_searchError` cleared on next keystroke
 
-#### 7. Create widget test file
+#### 7. Hide search UI when map times out
+
+**File**: `lib/screens/map_picker_screen.dart`
+
+**Intent**: When the map fails to load (existing 5-second timeout), hide the search bar. The fallback view already shows manual coordinate entry.
+
+**Contract**: In `_buildMap()`: wrap search bar + overlay in `if (!_timedOut)`.
+
+#### 8. Create widget test file
 
 **File**: `test/screens/map_picker_screen_test.dart` (new file)
 
-**Intent**: Widget tests verifying search field renders, debounce triggers after 300ms, results overlay appears with mock data, tapping result sets pin, and error states show inline message. Matches the existing pattern in `test/screens/trip_detail_screen_test.dart`.
+**Intent**: Widget tests verifying search field renders, debounce triggers after 300ms, predictions overlay appears with mock data, tapping result sets pin, error states show inline message, and cache returns results without repeated SDK calls.
 
 **Contract**:
-- Use `setTestDatabase()` in `setUp` / `clearTestDatabase()` in `tearDown` (matching existing test files).
-- Inject mock geocoder via overridable `_performSearch` method on a test subclass, or a thin `GeocodingService` wrapper — whichever the implementer prefers.
-- Pump `MapPickerScreen` inside `MaterialApp`, trigger search via `tester.enterText()`, advance timers for debounce, assert overlay widgets appear.
+- `MockPlacesService` extends `PlacesService`, overrides `autocomplete()` and `details()`
+- `CacheTestPlacesService` extends `PlacesService`, overrides `fetchPredictions()`, counts calls
+- Tests: search field renders, <3 chars shows nothing, 3+ chars triggers autocomplete, tap fetches details + sets pin, auto-search on `searchQuery`, empty results error, missing API key error, cache avoids repeat SDK calls
+
+#### 9. ProGuard rules for release builds
+
+**File**: `android/app/proguard-rules.pro`
+
+**Intent**: Prevent R8 from stripping `flutter_places_sdk` native method bindings in release builds.
 
 ### Success Criteria:
 
 #### Automated Verification:
 
 - `flutter analyze` passes
-- `flutter test` — all 66 existing tests pass (no regression)
+- `flutter test` — all 74 tests pass (73 existing + 1 cache test)
 - Widget test: search field renders on map screen
 - Widget test: typing 3+ characters triggers search after 300ms debounce
-- Widget test: results overlay appears with mock results, tap sets position
-- Widget test: search bar hidden in fallback mode
-- Widget test: cache returns same results for repeated query
+- Widget test: results overlay appears with mock predictions, tap fetches details + sets pin
+- Widget test: auto-search when `searchQuery` is passed
+- Widget test: search bar hidden in fallback mode (via timeout)
+- Widget test: error message when autocomplete returns empty
+- Widget test: error message when API key is missing
+- Widget test: cache returns results for repeat query without calling SDK again
 
 #### Manual Verification:
 
-- Open map picker from Add Attraction → search "Eiffel Tower" → overlay shows results → tap → map moves to Eiffel Tower coordinates, pin visible
-- Search "Luwr" → results appear → clear field → results disappear
-- Search with < 3 chars → no results, no API call
+- Open map picker from Add Attraction → search "Eiffel Tower" → predictions appear → tap → map moves to Eiffel Tower coordinates, pin visible, name pre-filled
+- Search "Luwr" → results appear → clear field → predictions disappear
+- Search with < 3 chars → no predictions, no API call
 - Disable network → search → inline error message appears
 - Timeout fallback still works — wait 5s on slow/no connection → manual entry view appears
-- Cache works: search same query twice → second result instant (no network call)
+- Edit attraction → map picker opens with current name pre-filled in search
 
 ---
 
@@ -162,26 +194,29 @@ Add search field + results overlay + in-memory cache to the existing map picker.
 - Search field renders when map is loaded, hidden when timed out
 - Debounce: search triggered after 300ms, not immediately
 - Min query length: < 3 chars shows no results
-- Results overlay: items render, tap sets pin position
-- Error state: inline error message when geocoder throws
-- Cache: mock geocoder returns stored results on second call
+- Predictions overlay: items render, tap fetches details and sets pin position
+- Auto-search: passing `searchQuery` triggers search on open
+- Error state: inline error message when autocomplete returns empty or API key missing
+- Cache: `fetchPredictions` called only once for repeated query
 
-Mock approach: wrap the geocoding call in a thin method (`_geocode(String query)`) that can be overridden or injected in tests. Use a `setTestGeocoder()` pattern matching existing `setTestDatabase()`.
+Mock approach: `MockPlacesService` overrides `autocomplete()`/`details()` with canned callbacks. `CacheTestPlacesService` overrides `fetchPredictions()` and counts calls, letting the real `autocomplete()` cache path run.
 
 ### Manual Testing Steps:
 
-1. Open Add Attraction → Pick on map → search "Eiffel Tower" → tap result → Confirm → coordinates populate
-2. Search "asdfghjkl" → "No places found" message
-3. Airplane mode → search anything → "Geocoding not available" message
+1. Open Add Attraction → Pick on map → search "Eiffel Tower" → tap result → Confirm → coordinates + name populate
+2. Search "asdfghjkl" → "No places found." message
+3. Missing API key → "Places search not available." message
 4. Type 2 chars "Pa" → no search triggered
-5. Type "Paris" → wait 300ms → results appear → tap map background → results dismiss
+5. Type "Paris" → wait 300ms → predictions appear → tap map background → predictions dismiss
 6. Existing tap-to-place still works — tap map directly, pin appears, Confirm works
+7. Edit attraction with existing place name → map opens with name pre-filled in search
 
 ## Performance Considerations
 
-- In-memory cache capped at 50 entries, LRU-eviction via `LinkedHashMap` — prevents unbounded growth for edge case of hundreds of unique queries
-- Debounce 300ms prevents excessive geocoder calls while typing
-- `locationFromAddress()` calls Android Geocoder (local, no network needed for Play Services), ~10-50ms latency
+- In-memory cache capped at 50 entries, LRU-eviction via `LinkedHashMap` — prevents unbounded growth
+- Debounce 300ms prevents excessive SDK calls while typing
+- `findAutocompletePredictions()` uses native Places SDK (~50-200ms latency)
+- `fetchPlace()` is only called on tap (not during typing) — minimizes API costs
 
 ## Migration Notes
 
@@ -191,8 +226,9 @@ No migration needed. New package only. Schema unchanged at v4.
 
 - Research: `context/changes/map-search/research.md`
 - Existing map picker: `lib/screens/map_picker_screen.dart`
-- Flutter Geocoding docs: `/baseflow/flutter-geocoding` (Context7)
+- Places service: `lib/services/geocoding_service.dart`
 - PRD v2: `context/foundation/prd-v2.md` — S-08
+- ProGuard rules: `android/app/proguard-rules.pro`
 
 ## Progress
 
@@ -203,16 +239,19 @@ No migration needed. New package only. Schema unchanged at v4.
 #### Automated
 
 - [x] 1.1 `flutter analyze` passes
-- [x] 1.2 `flutter test` — all 66 existing tests pass
+- [x] 1.2 `flutter test` — all 74 tests pass
 - [x] 1.3 Widget test: search field renders, hidden in fallback mode
-- [x] 1.4 Widget test: typing 3+ chars triggers debounced search, results overlay appears
-- [x] 1.5 Widget test: tapping result sets pin position
+- [x] 1.4 Widget test: typing 3+ chars triggers debounced search, predictions overlay appears
+- [x] 1.5 Widget test: tapping result fetches details and sets pin position
 - [x] 1.6 Widget test: geocoder error shows inline message
+- [x] 1.6a Widget test: auto-search when searchQuery is passed
+- [x] 1.6b Widget test: cache avoids repeat SDK calls
 
 #### Manual
 
-- [ ] 1.7 Search "Eiffel Tower" → results → tap → map moves, pin set
+- [ ] 1.7 Search "Eiffel Tower" → predictions → tap → map moves, pin set, name populated
 - [ ] 1.8 Search < 3 chars → no API call
 - [ ] 1.9 Network off → inline error message
 - [ ] 1.10 Timeout fallback still works after 5s
 - [ ] 1.11 Cache: repeat query returns instant results
+- [ ] 1.12 Edit attraction: map opens with existing name pre-filled in search
