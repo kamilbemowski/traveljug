@@ -10,7 +10,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -27,6 +27,9 @@ class AppDatabase extends _$AppDatabase {
           if (from < 4) {
             await m.addColumn(attractions, attractions.latitude);
             await m.addColumn(attractions, attractions.longitude);
+          }
+          if (from < 5) {
+            await m.addColumn(attractions, attractions.placeName);
           }
         },
         beforeOpen: (details) async {

@@ -76,6 +76,11 @@ class Attractions extends Table {
   /// GPS longitude, nullable per S-06. REAL (IEEE 754 double) in SQLite.
   RealColumn get longitude => real().nullable()();
 
+  /// Place name from Google Places SDK — stored alongside coordinates
+  /// so the user can see what place they picked, even if they rename
+  /// the attraction. Nullable (only set when coordinates come from Places SDK).
+  TextColumn get placeName => text().nullable()();
+
   /// Foreign key to [Trips] — cascade delete when trip is removed.
   IntColumn get tripId => integer().references(
         Trips,

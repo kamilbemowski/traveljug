@@ -20,6 +20,7 @@ class AttractionDao extends DatabaseAccessor<AppDatabase>
     int position = 0,
     double? latitude,
     double? longitude,
+    String? placeName,
   }) {
     return into(db.attractions).insert(AttractionsCompanion.insert(
           name: name,
@@ -30,6 +31,7 @@ class AttractionDao extends DatabaseAccessor<AppDatabase>
           tripId: tripId,
           latitude: Value(latitude),
           longitude: Value(longitude),
+          placeName: Value(placeName),
         ));
   }
 
@@ -58,6 +60,7 @@ class AttractionDao extends DatabaseAccessor<AppDatabase>
     int? tripId,
     double? latitude,
     double? longitude,
+    String? placeName,
   }) async {
     await (update(db.attractions)..where((a) => a.id.equals(id))).write(
           AttractionsCompanion(
@@ -69,6 +72,7 @@ class AttractionDao extends DatabaseAccessor<AppDatabase>
             tripId: Value.absentIfNull(tripId),
             latitude: Value.absentIfNull(latitude),
             longitude: Value.absentIfNull(longitude),
+            placeName: Value.absentIfNull(placeName),
           ),
         );
   }

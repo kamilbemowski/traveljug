@@ -326,6 +326,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.0"
+  flutter_places_sdk:
+    dependency: "direct main"
+    description:
+      name: flutter_places_sdk
+      sha256: "4fd058d1e9904afe0101f185777f18b740c77d9a7123ea9999257228dd9c1590"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.0"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:

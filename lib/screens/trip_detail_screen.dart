@@ -176,117 +176,30 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
   Future<void> _handleEditAttraction(int dayIndex, int slotIndex) async {
     final slot = _timeline[dayIndex].slots[slotIndex];
-    final nameCtrl = TextEditingController(text: slot.attraction.name);
-    final durCtrl = TextEditingController(text: slot.attraction.durationMin.toString());
-    AttractionCategory cat;
-    try {
-      cat = AttractionCategory.values.byName(slot.attraction.category);
-    } on ArgumentError {
-      cat = AttractionCategory.other;
-    }
-    int prio = slot.attraction.priority;
-
-    final formKey = GlobalKey<FormState>();
-
-    final saved = await showDialog<bool>(
+    final result = await showDialog<EditAttractionResult>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Edit Attraction'),
-          content: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: nameCtrl,
-                    decoration: const InputDecoration(labelText: 'Name'),
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: durCtrl,
-                    decoration: const InputDecoration(labelText: 'Duration (minutes)'),
-                    keyboardType: TextInputType.number,
-                    validator: (v) {
-                      final dur = int.tryParse(v?.trim() ?? '');
-                      if (dur == null || dur <= 0) return 'Must be a positive number';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<AttractionCategory>(
-                    initialValue: cat,
-                    decoration: const InputDecoration(labelText: 'Category'),
-                    items: AttractionCategory.values.map((c) => DropdownMenuItem(value: c, child: Text(c.name[0].toUpperCase() + c.name.substring(1)))).toList(),
-                    onChanged: (v) { if (v != null) setDialogState(() => cat = v); },
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<int>(
-                    initialValue: prio,
-                    decoration: const InputDecoration(labelText: 'Priority'),
-                    items: const [
-                      DropdownMenuItem(value: 0, child: Text('Must-have')),
-                      DropdownMenuItem(value: 1, child: Text('Nice-to-have')),
-                      DropdownMenuItem(value: 2, child: Text('Optional')),
-                    ],
-                    onChanged: (v) { if (v != null) setDialogState(() => prio = v); },
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                if (formKey.currentState?.validate() ?? false) {
-                  Navigator.pop(ctx, true);
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        ),
-      ),
+      builder: (_) => _EditAttractionDialog(attraction: slot.attraction),
     );
-    if (saved != true) {
-      nameCtrl.dispose();
-      durCtrl.dispose();
-      return;
-    }
-
-    final dur = int.tryParse(durCtrl.text.trim());
-    if (dur == null || dur <= 0) {
-      nameCtrl.dispose();
-      durCtrl.dispose();
-      return;
-    }
+    if (result == null) return;
 
     try {
       final db = await getDatabase();
       await AttractionDao(db).updateAttraction(slot.attraction.id,
-        name: nameCtrl.text.trim(),
-        durationMin: dur,
-        category: cat,
-        priority: prio,
+        name: result.name,
+        durationMin: result.durationMin,
+        category: result.category,
+        priority: result.priority,
+        latitude: result.latitude,
+        longitude: result.longitude,
+        placeName: result.placeName,
       );
     } catch (e) {
-      if (!mounted) {
-        nameCtrl.dispose();
-        durCtrl.dispose();
-        return;
-      }
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to update attraction. Please try again.')),
       );
-      nameCtrl.dispose();
-      durCtrl.dispose();
       return;
     }
-    nameCtrl.dispose();
-    durCtrl.dispose();
     _loadTimeline();
   }
 
@@ -666,6 +579,7 @@ class _AddAttractionDialogState extends State<_AddAttractionDialog> {
   int _priority = 1;
   double? _latitude;
   double? _longitude;
+  String? _placeName;
   bool _showLocation = false;
 
   @override
@@ -688,6 +602,7 @@ class _AddAttractionDialogState extends State<_AddAttractionDialog> {
         position: existing.length,
         latitude: _latitude,
         longitude: _longitude,
+        placeName: _placeName,
       );
     } catch (e) {
       if (!mounted) return;
@@ -724,20 +639,32 @@ class _AddAttractionDialogState extends State<_AddAttractionDialog> {
               if (_latitude != null && _longitude != null)
                 ListTile(
                   leading: const Icon(Icons.location_on, color: Colors.green),
-                  title: Text('${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)}'),
+                  title: Text(_placeName ?? '${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)}'),
+                  subtitle: _placeName != null
+                      ? Text('${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)}',
+                          style: const TextStyle(fontSize: 12))
+                      : null,
                   trailing: IconButton(
                     icon: const Icon(Icons.clear, size: 18),
-                    onPressed: () => setState(() { _latitude = null; _longitude = null; }),
+                    onPressed: () => setState(() { _latitude = null; _longitude = null; _placeName = null; }),
                   ),
                   dense: true,
                 ),
               ElevatedButton.icon(
                 onPressed: () async {
-                  final pos = await MapPickerScreen.show(context);
-                  if (pos != null && mounted) {
+                  final result = await MapPickerScreen.show(
+                    context,
+                    searchQuery: _nameController.text.trim(),
+                  );
+                  if (result != null && mounted) {
                     setState(() {
-                      _latitude = pos.latitude;
-                      _longitude = pos.longitude;
+                      _latitude = result.coordinates.latitude;
+                      _longitude = result.coordinates.longitude;
+                      _placeName = result.name;
+                      // Pre-fill name if user hasn't typed one yet.
+                      if (_nameController.text.trim().isEmpty) {
+                        _nameController.text = result.name;
+                      }
                     });
                   }
                 },
@@ -750,6 +677,196 @@ class _AddAttractionDialogState extends State<_AddAttractionDialog> {
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        ElevatedButton(onPressed: _save, child: const Text('Save')),
+      ],
+    );
+  }
+}
+
+// ── Edit Attraction Dialog ──
+
+class EditAttractionResult {
+  final String name;
+  final int durationMin;
+  final AttractionCategory category;
+  final int priority;
+  final double? latitude;
+  final double? longitude;
+  final String? placeName;
+
+  const EditAttractionResult({
+    required this.name,
+    required this.durationMin,
+    required this.category,
+    required this.priority,
+    this.latitude,
+    this.longitude,
+    this.placeName,
+  });
+}
+
+class _EditAttractionDialog extends StatefulWidget {
+  final Attraction attraction;
+  const _EditAttractionDialog({required this.attraction});
+
+  @override
+  State<_EditAttractionDialog> createState() => _EditAttractionDialogState();
+}
+
+class _EditAttractionDialogState extends State<_EditAttractionDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _durCtrl;
+  late AttractionCategory _cat;
+  late int _prio;
+  double? _lat;
+  double? _lng;
+  String? _placeName;
+
+  @override
+  void initState() {
+    super.initState();
+    final a = widget.attraction;
+    _nameCtrl = TextEditingController(text: a.name);
+    _durCtrl = TextEditingController(text: a.durationMin.toString());
+    try {
+      _cat = AttractionCategory.values.byName(a.category);
+    } on ArgumentError {
+      _cat = AttractionCategory.other;
+    }
+    _prio = a.priority;
+    _lat = a.latitude;
+    _lng = a.longitude;
+    _placeName = a.placeName;
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _durCtrl.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    if (!_formKey.currentState!.validate()) return;
+    final dur = int.tryParse(_durCtrl.text.trim());
+    if (dur == null || dur <= 0) return;
+    Navigator.pop(
+      context,
+      EditAttractionResult(
+        name: _nameCtrl.text.trim(),
+        durationMin: dur,
+        category: _cat,
+        priority: _prio,
+        latitude: _lat,
+        longitude: _lng,
+        placeName: _placeName,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit Attraction'),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _nameCtrl,
+                decoration: const InputDecoration(labelText: 'Name'),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _durCtrl,
+                decoration: const InputDecoration(labelText: 'Duration (minutes)'),
+                keyboardType: TextInputType.number,
+                validator: (v) {
+                  final dur = int.tryParse(v?.trim() ?? '');
+                  if (dur == null || dur <= 0) return 'Must be a positive number';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<AttractionCategory>(
+                initialValue: _cat,
+                decoration: const InputDecoration(labelText: 'Category'),
+                items: AttractionCategory.values
+                    .map((c) => DropdownMenuItem(
+                          value: c,
+                          child: Text(c.name[0].toUpperCase() + c.name.substring(1)),
+                        ))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) setState(() => _cat = v);
+                },
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<int>(
+                initialValue: _prio,
+                decoration: const InputDecoration(labelText: 'Priority'),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('Must-have')),
+                  DropdownMenuItem(value: 1, child: Text('Nice-to-have')),
+                  DropdownMenuItem(value: 2, child: Text('Optional')),
+                ],
+                onChanged: (v) {
+                  if (v != null) setState(() => _prio = v);
+                },
+              ),
+              const SizedBox(height: 12),
+              if (_lat != null && _lng != null)
+                ListTile(
+                  leading: const Icon(Icons.location_on, color: Colors.green),
+                  title: Text(_placeName ??
+                      '${_lat!.toStringAsFixed(4)}, ${_lng!.toStringAsFixed(4)}'),
+                  subtitle: _placeName != null
+                      ? Text('${_lat!.toStringAsFixed(4)}, ${_lng!.toStringAsFixed(4)}',
+                          style: const TextStyle(fontSize: 12))
+                      : null,
+                  trailing: IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () => setState(() {
+                      _lat = null;
+                      _lng = null;
+                      _placeName = null;
+                    }),
+                  ),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final result = await MapPickerScreen.show(
+                    context,
+                    searchQuery: _nameCtrl.text.trim(),
+                  );
+                  if (result != null && mounted) {
+                    setState(() {
+                      _lat = result.coordinates.latitude;
+                      _lng = result.coordinates.longitude;
+                      _placeName = result.name;
+                      if (_nameCtrl.text.trim().isEmpty) {
+                        _nameCtrl.text = result.name;
+                      }
+                    });
+                  }
+                },
+                icon: const Icon(Icons.map),
+                label: const Text('Pick on map'),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
         ElevatedButton(onPressed: _save, child: const Text('Save')),
       ],
     );
