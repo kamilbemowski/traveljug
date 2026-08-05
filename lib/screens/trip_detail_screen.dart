@@ -8,6 +8,7 @@ import '../database/tables.dart';
 import '../models/timeline_day.dart';
 import 'map_picker_screen.dart';
 import '../services/pace_config.dart';
+import '../widgets/edit_trip_dialog.dart';
 import '../services/timeline_service.dart';
 
 class TripDetailScreen extends StatefulWidget {
@@ -38,43 +39,48 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   }
 
   Future<void> _loadTimeline() async {
-    final db = await getDatabase();
-    final tripDao = TripDao(db);
-    final attractionDao = AttractionDao(db);
+    try {
+      final db = await getDatabase();
+      final tripDao = TripDao(db);
+      final attractionDao = AttractionDao(db);
 
-    final trip = await tripDao.getTripById(widget.trip.id);
-    final attractions = await attractionDao.listAttractionsByTrip(widget.trip.id);
+      final trip = await tripDao.getTripById(widget.trip.id);
+      final attractions = await attractionDao.listAttractionsByTrip(widget.trip.id);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (trip == null) {
-      setState(() { _error = 'Trip not found'; _loading = false; });
-      return;
+      if (trip == null) {
+        setState(() { _error = 'Trip not found'; _loading = false; });
+        return;
+      }
+
+      if (trip.startDate == null || trip.endDate == null) {
+        setState(() { _trip = trip; _error = 'Add trip dates to see your plan'; _loading = false; });
+        return;
+      }
+
+      if (attractions.isEmpty) {
+        setState(() { _trip = trip; _error = 'Add attractions to see your plan'; _loading = false; });
+        return;
+      }
+
+      final computed = TimelineService.computeTimeline(trip, attractions);
+      final overrideDao = TimelineOverrideDao(db);
+      final overrides = await overrideDao.loadOverridesByTrip(widget.trip.id);
+      final baseTravel = travelMinutesForContext(parseTravelContext(trip.travelContext));
+      final speedKmh = speedKmhForContext(parseTravelContext(trip.travelContext));
+      final timeline = TimelineService.reapplyOverrides(
+        computed, overrides,
+        pace: trip.pace,
+        baseTravel: baseTravel,
+        speedKmh: speedKmh,
+      );
+
+      setState(() { _trip = trip; _timeline = timeline; _error = null; _loading = false; });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _error = 'Failed to load timeline. Please try again.'; _loading = false; });
     }
-
-    if (trip.startDate == null || trip.endDate == null) {
-      setState(() { _trip = trip; _error = 'Add trip dates to see your plan'; _loading = false; });
-      return;
-    }
-
-    if (attractions.isEmpty) {
-      setState(() { _trip = trip; _error = 'Add attractions to see your plan'; _loading = false; });
-      return;
-    }
-
-    final computed = TimelineService.computeTimeline(trip, attractions);
-    final overrideDao = TimelineOverrideDao(db);
-    final overrides = await overrideDao.loadOverridesByTrip(widget.trip.id);
-    final baseTravel = travelMinutesForContext(parseTravelContext(trip.travelContext));
-    final speedKmh = speedKmhForContext(parseTravelContext(trip.travelContext));
-    final timeline = TimelineService.reapplyOverrides(
-      computed, overrides,
-      pace: trip.pace,
-      baseTravel: baseTravel,
-      speedKmh: speedKmh,
-    );
-
-    setState(() { _trip = trip; _timeline = timeline; _error = null; _loading = false; });
   }
 
   Future<void> _handleReorder(int dayIndex, int oldIndex, int newIndex) async {
@@ -85,10 +91,12 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
     try {
       final db = await getDatabase();
-      final dao = TimelineOverrideDao(db);
-      for (var i = 0; i < slots.length; i++) {
-        await dao.upsertOverride(slots[i].attraction.id, dayIndex, i);
-      }
+      await db.transaction(() async {
+        final dao = TimelineOverrideDao(db);
+        for (var i = 0; i < slots.length; i++) {
+          await dao.upsertOverride(slots[i].attraction.id, dayIndex, i);
+        }
+      });
     } catch (e) {
       if (!mounted) return;
       _showError('Failed to reorder attractions. Please try again.');
@@ -115,68 +123,18 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   }
 
   Future<void> _editTripDialog(Trip trip) async {
-    final nameController = TextEditingController(text: trip.name);
-    final destController = TextEditingController(text: trip.destination);
-    DateTime? startDate = trip.startDate;
-    DateTime? endDate = trip.endDate;
-    TravelPace pace = parsePace(trip.pace);
-    TravelContext? travelContext = parseTravelContext(trip.travelContext);
-
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Edit Trip'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Name')),
-                const SizedBox(height: 8),
-                TextField(controller: destController, decoration: const InputDecoration(labelText: 'Destination')),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(child: _buildDateField(ctx, setDialogState, 'Start', true, startDate, (d) => startDate = d)),
-                    const SizedBox(width: 8),
-                    Expanded(child: _buildDateField(ctx, setDialogState, 'End', false, endDate, (d) => endDate = d)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<TravelPace>(
-                  initialValue: pace,
-                  decoration: const InputDecoration(labelText: 'Pace'),
-                  items: TravelPace.values.map((p) => DropdownMenuItem(value: p, child: Text(p.name[0].toUpperCase() + p.name.substring(1)))).toList(),
-                  onChanged: (v) { if (v != null) setDialogState(() => pace = v); },
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<TravelContext?>(
-                  initialValue: travelContext,
-                  decoration: const InputDecoration(labelText: 'Travel context'),
-                  items: [null, TravelContext.city, TravelContext.roadTrip].map((c) => DropdownMenuItem(value: c, child: Text(travelContextLabel(c)))).toList(),
-                  onChanged: (v) => setDialogState(() => travelContext = v),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
-          ],
-        ),
-      ),
-    );
-    if (saved != true) return;
+    final result = await showEditTripDialog(context, trip);
+    if (result == null) return;
 
     try {
       final db = await getDatabase();
       await TripDao(db).updateTrip(trip.id,
-        name: nameController.text.trim(),
-        destination: destController.text.trim(),
-        startDate: startDate,
-        endDate: endDate,
-        pace: pace,
-        travelContext: travelContext,
+        name: result.name,
+        destination: result.destination,
+        startDate: result.startDate,
+        endDate: result.endDate,
+        pace: result.pace,
+        travelContext: result.travelContext,
       );
     } catch (e) {
       if (!mounted) return;
@@ -216,50 +174,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     Navigator.pop(context, true);
   }
 
-  Widget _buildDateField(BuildContext dialogCtx, void Function(void Function()) setDialogState,
-      String label, bool isStart, DateTime? current, void Function(DateTime?) onChanged) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('$label date', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        const SizedBox(height: 4),
-        InkWell(
-          onTap: () async {
-            final d = await showDatePicker(
-              context: dialogCtx,
-              initialDate: current ?? DateTime.now(),
-              firstDate: DateTime(2020),
-              lastDate: DateTime(2035),
-            );
-            if (d != null) setDialogState(() => onChanged(d));
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade400),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    current != null ? '${current.day}.${current.month}.${current.year}' : '—',
-                    style: TextStyle(color: current != null ? Colors.black87 : Colors.grey),
-                  ),
-                ),
-                if (current != null)
-                  GestureDetector(
-                    onTap: () => setDialogState(() => onChanged(null)),
-                    child: const Icon(Icons.clear, size: 16),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Future<void> _handleEditAttraction(int dayIndex, int slotIndex) async {
     final slot = _timeline[dayIndex].slots[slotIndex];
     final nameCtrl = TextEditingController(text: slot.attraction.name);
@@ -272,54 +186,83 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     }
     int prio = slot.attraction.priority;
 
+    final formKey = GlobalKey<FormState>();
+
     final saved = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Edit Attraction'),
           content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: durCtrl,
-                  decoration: const InputDecoration(labelText: 'Duration (minutes)'),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<AttractionCategory>(
-                  initialValue: cat,
-                  decoration: const InputDecoration(labelText: 'Category'),
-                  items: AttractionCategory.values.map((c) => DropdownMenuItem(value: c, child: Text(c.name[0].toUpperCase() + c.name.substring(1)))).toList(),
-                  onChanged: (v) { if (v != null) setDialogState(() => cat = v); },
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<int>(
-                  initialValue: prio,
-                  decoration: const InputDecoration(labelText: 'Priority'),
-                  items: const [
-                    DropdownMenuItem(value: 0, child: Text('Must-have')),
-                    DropdownMenuItem(value: 1, child: Text('Nice-to-have')),
-                    DropdownMenuItem(value: 2, child: Text('Optional')),
-                  ],
-                  onChanged: (v) { if (v != null) setDialogState(() => prio = v); },
-                ),
-              ],
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(labelText: 'Name'),
+                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: durCtrl,
+                    decoration: const InputDecoration(labelText: 'Duration (minutes)'),
+                    keyboardType: TextInputType.number,
+                    validator: (v) {
+                      final dur = int.tryParse(v?.trim() ?? '');
+                      if (dur == null || dur <= 0) return 'Must be a positive number';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<AttractionCategory>(
+                    initialValue: cat,
+                    decoration: const InputDecoration(labelText: 'Category'),
+                    items: AttractionCategory.values.map((c) => DropdownMenuItem(value: c, child: Text(c.name[0].toUpperCase() + c.name.substring(1)))).toList(),
+                    onChanged: (v) { if (v != null) setDialogState(() => cat = v); },
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<int>(
+                    initialValue: prio,
+                    decoration: const InputDecoration(labelText: 'Priority'),
+                    items: const [
+                      DropdownMenuItem(value: 0, child: Text('Must-have')),
+                      DropdownMenuItem(value: 1, child: Text('Nice-to-have')),
+                      DropdownMenuItem(value: 2, child: Text('Optional')),
+                    ],
+                    onChanged: (v) { if (v != null) setDialogState(() => prio = v); },
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+            ElevatedButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() ?? false) {
+                  Navigator.pop(ctx, true);
+                }
+              },
+              child: const Text('Save'),
+            ),
           ],
         ),
       ),
     );
-    if (saved != true) return;
+    if (saved != true) {
+      nameCtrl.dispose();
+      durCtrl.dispose();
+      return;
+    }
 
     final dur = int.tryParse(durCtrl.text.trim());
-    if (dur == null || dur <= 0) return;
+    if (dur == null || dur <= 0) {
+      nameCtrl.dispose();
+      durCtrl.dispose();
+      return;
+    }
 
     try {
       final db = await getDatabase();
@@ -330,12 +273,20 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         priority: prio,
       );
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        nameCtrl.dispose();
+        durCtrl.dispose();
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to update attraction. Please try again.')),
       );
+      nameCtrl.dispose();
+      durCtrl.dispose();
       return;
     }
+    nameCtrl.dispose();
+    durCtrl.dispose();
     _loadTimeline();
   }
 
@@ -355,10 +306,12 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
     try {
       final db = await getDatabase();
-      final dao = TimelineOverrideDao(db);
-      for (final slot in _timeline[dayIndex].slots) {
-        await dao.deleteOverride(slot.attraction.id);
-      }
+      await db.transaction(() async {
+        final dao = TimelineOverrideDao(db);
+        for (final slot in _timeline[dayIndex].slots) {
+          await dao.deleteOverride(slot.attraction.id);
+        }
+      });
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -386,10 +339,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
     try {
       final db = await getDatabase();
-      final attractionDao = AttractionDao(db);
-      await attractionDao.deleteAttraction(slot.attraction.id);
-      final overrideDao = TimelineOverrideDao(db);
-      await overrideDao.deleteOverride(slot.attraction.id);
+      await AttractionDao(db).deleteAttraction(slot.attraction.id);
+      // FK cascade removes the attraction's overrides automatically.
     } catch (e) {
       if (!mounted) return;
       _showError('Failed to remove attraction. Please try again.');
