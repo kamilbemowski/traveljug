@@ -35,6 +35,10 @@ Two boundaries to keep straight:
 How to work with this Flutter/Dart project. This section is hand-maintained,
 outside the 10x-cli managed block — keep it current.
 
+### Branch strategy (MANDATORY)
+- **`develop` is the default branch.** All feature branches branch off `develop`, all PRs target `develop`.
+- **`main` is hands-off — never touch it.** No commits, no PRs against `main`. It's production, updated only via release process.
+
 ### One-time setup
 ```bash
 flutter pub get
