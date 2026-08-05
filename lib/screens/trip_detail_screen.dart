@@ -8,7 +8,6 @@ import '../database/tables.dart';
 import '../models/timeline_day.dart';
 import 'map_picker_screen.dart';
 import '../services/pace_config.dart';
-import '../widgets/edit_trip_dialog.dart';
 import '../services/timeline_service.dart';
 
 class TripDetailScreen extends StatefulWidget {
@@ -39,48 +38,43 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   }
 
   Future<void> _loadTimeline() async {
-    try {
-      final db = await getDatabase();
-      final tripDao = TripDao(db);
-      final attractionDao = AttractionDao(db);
+    final db = await getDatabase();
+    final tripDao = TripDao(db);
+    final attractionDao = AttractionDao(db);
 
-      final trip = await tripDao.getTripById(widget.trip.id);
-      final attractions = await attractionDao.listAttractionsByTrip(widget.trip.id);
+    final trip = await tripDao.getTripById(widget.trip.id);
+    final attractions = await attractionDao.listAttractionsByTrip(widget.trip.id);
 
-      if (!mounted) return;
+    if (!mounted) return;
 
-      if (trip == null) {
-        setState(() { _error = 'Trip not found'; _loading = false; });
-        return;
-      }
-
-      if (trip.startDate == null || trip.endDate == null) {
-        setState(() { _trip = trip; _error = 'Add trip dates to see your plan'; _loading = false; });
-        return;
-      }
-
-      if (attractions.isEmpty) {
-        setState(() { _trip = trip; _error = 'Add attractions to see your plan'; _loading = false; });
-        return;
-      }
-
-      final computed = TimelineService.computeTimeline(trip, attractions);
-      final overrideDao = TimelineOverrideDao(db);
-      final overrides = await overrideDao.loadOverridesByTrip(widget.trip.id);
-      final baseTravel = travelMinutesForContext(parseTravelContext(trip.travelContext));
-      final speedKmh = speedKmhForContext(parseTravelContext(trip.travelContext));
-      final timeline = TimelineService.reapplyOverrides(
-        computed, overrides,
-        pace: trip.pace,
-        baseTravel: baseTravel,
-        speedKmh: speedKmh,
-      );
-
-      setState(() { _trip = trip; _timeline = timeline; _error = null; _loading = false; });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() { _error = 'Failed to load timeline. Please try again.'; _loading = false; });
+    if (trip == null) {
+      setState(() { _error = 'Trip not found'; _loading = false; });
+      return;
     }
+
+    if (trip.startDate == null || trip.endDate == null) {
+      setState(() { _trip = trip; _error = 'Add trip dates to see your plan'; _loading = false; });
+      return;
+    }
+
+    if (attractions.isEmpty) {
+      setState(() { _trip = trip; _error = 'Add attractions to see your plan'; _loading = false; });
+      return;
+    }
+
+    final computed = TimelineService.computeTimeline(trip, attractions);
+    final overrideDao = TimelineOverrideDao(db);
+    final overrides = await overrideDao.loadOverridesByTrip(widget.trip.id);
+    final baseTravel = travelMinutesForContext(parseTravelContext(trip.travelContext));
+    final speedKmh = speedKmhForContext(parseTravelContext(trip.travelContext));
+    final timeline = TimelineService.reapplyOverrides(
+      computed, overrides,
+      pace: trip.pace,
+      baseTravel: baseTravel,
+      speedKmh: speedKmh,
+    );
+
+    setState(() { _trip = trip; _timeline = timeline; _error = null; _loading = false; });
   }
 
   Future<void> _handleReorder(int dayIndex, int oldIndex, int newIndex) async {
@@ -91,12 +85,10 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
     try {
       final db = await getDatabase();
-      await db.transaction(() async {
-        final dao = TimelineOverrideDao(db);
-        for (var i = 0; i < slots.length; i++) {
-          await dao.upsertOverride(slots[i].attraction.id, dayIndex, i);
-        }
-      });
+      final dao = TimelineOverrideDao(db);
+      for (var i = 0; i < slots.length; i++) {
+        await dao.upsertOverride(slots[i].attraction.id, dayIndex, i);
+      }
     } catch (e) {
       if (!mounted) return;
       _showError('Failed to reorder attractions. Please try again.');
@@ -122,206 +114,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     _loadTimeline();
   }
 
-  Future<void> _editTripDialog(Trip trip) async {
-    final result = await showEditTripDialog(context, trip);
-    if (result == null) return;
-
-    try {
-      final db = await getDatabase();
-      await TripDao(db).updateTrip(trip.id,
-        name: result.name,
-        destination: result.destination,
-        startDate: result.startDate,
-        endDate: result.endDate,
-        pace: result.pace,
-        travelContext: result.travelContext,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to update trip. Please try again.')),
-      );
-      return;
-    }
-    _loadTimeline();
-  }
-
-  Future<void> _deleteTripFromDetail(Trip trip) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete trip?'),
-        content: Text('Delete "${trip.name}" and all its attractions?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
-        ],
-      ),
-    );
-    if (confirm != true) return;
-
-    try {
-      final db = await getDatabase();
-      await TripDao(db).deleteTrip(trip.id);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to delete trip. Please try again.')),
-      );
-      return;
-    }
-    if (!mounted) return;
-    Navigator.pop(context, true);
-  }
-
-  Future<void> _handleEditAttraction(int dayIndex, int slotIndex) async {
-    final slot = _timeline[dayIndex].slots[slotIndex];
-    final nameCtrl = TextEditingController(text: slot.attraction.name);
-    final durCtrl = TextEditingController(text: slot.attraction.durationMin.toString());
-    AttractionCategory cat;
-    try {
-      cat = AttractionCategory.values.byName(slot.attraction.category);
-    } on ArgumentError {
-      cat = AttractionCategory.other;
-    }
-    int prio = slot.attraction.priority;
-
-    final formKey = GlobalKey<FormState>();
-
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Edit Attraction'),
-          content: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: nameCtrl,
-                    decoration: const InputDecoration(labelText: 'Name'),
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: durCtrl,
-                    decoration: const InputDecoration(labelText: 'Duration (minutes)'),
-                    keyboardType: TextInputType.number,
-                    validator: (v) {
-                      final dur = int.tryParse(v?.trim() ?? '');
-                      if (dur == null || dur <= 0) return 'Must be a positive number';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<AttractionCategory>(
-                    initialValue: cat,
-                    decoration: const InputDecoration(labelText: 'Category'),
-                    items: AttractionCategory.values.map((c) => DropdownMenuItem(value: c, child: Text(c.name[0].toUpperCase() + c.name.substring(1)))).toList(),
-                    onChanged: (v) { if (v != null) setDialogState(() => cat = v); },
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<int>(
-                    initialValue: prio,
-                    decoration: const InputDecoration(labelText: 'Priority'),
-                    items: const [
-                      DropdownMenuItem(value: 0, child: Text('Must-have')),
-                      DropdownMenuItem(value: 1, child: Text('Nice-to-have')),
-                      DropdownMenuItem(value: 2, child: Text('Optional')),
-                    ],
-                    onChanged: (v) { if (v != null) setDialogState(() => prio = v); },
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                if (formKey.currentState?.validate() ?? false) {
-                  Navigator.pop(ctx, true);
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (saved != true) {
-      nameCtrl.dispose();
-      durCtrl.dispose();
-      return;
-    }
-
-    final dur = int.tryParse(durCtrl.text.trim());
-    if (dur == null || dur <= 0) {
-      nameCtrl.dispose();
-      durCtrl.dispose();
-      return;
-    }
-
-    try {
-      final db = await getDatabase();
-      await AttractionDao(db).updateAttraction(slot.attraction.id,
-        name: nameCtrl.text.trim(),
-        durationMin: dur,
-        category: cat,
-        priority: prio,
-      );
-    } catch (e) {
-      if (!mounted) {
-        nameCtrl.dispose();
-        durCtrl.dispose();
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to update attraction. Please try again.')),
-      );
-      nameCtrl.dispose();
-      durCtrl.dispose();
-      return;
-    }
-    nameCtrl.dispose();
-    durCtrl.dispose();
-    _loadTimeline();
-  }
-
-  Future<void> _handleResetDay(int dayIndex) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Reset day?'),
-        content: const Text('Remove all manual adjustments for this day and restore the original computed plan?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Reset')),
-        ],
-      ),
-    );
-    if (confirm != true) return;
-
-    try {
-      final db = await getDatabase();
-      await db.transaction(() async {
-        final dao = TimelineOverrideDao(db);
-        for (final slot in _timeline[dayIndex].slots) {
-          await dao.deleteOverride(slot.attraction.id);
-        }
-      });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to reset day. Please try again.')),
-      );
-      return;
-    }
-    _loadTimeline();
-  }
-
   Future<void> _handleDelete(int slotIndex, int dayIndex) async {
     final slot = _timeline[dayIndex].slots[slotIndex];
     final confirm = await showDialog<bool>(
@@ -339,8 +131,10 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
     try {
       final db = await getDatabase();
-      await AttractionDao(db).deleteAttraction(slot.attraction.id);
-      // FK cascade removes the attraction's overrides automatically.
+      final attractionDao = AttractionDao(db);
+      await attractionDao.deleteAttraction(slot.attraction.id);
+      final overrideDao = TimelineOverrideDao(db);
+      await overrideDao.deleteOverride(slot.attraction.id);
     } catch (e) {
       if (!mounted) return;
       _showError('Failed to remove attraction. Please try again.');
@@ -354,21 +148,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   Widget build(BuildContext context) {
     final t = _trip ?? widget.trip;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(t.name),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            tooltip: 'Edit trip',
-            onPressed: () => _editTripDialog(t),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete, color: Colors.red),
-            tooltip: 'Delete trip',
-            onPressed: () => _deleteTripFromDetail(t),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: Text(t.name)),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -427,8 +207,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                 onReorder: (oldIdx, newIdx) => _handleReorder(index, oldIdx, newIdx),
                 onMoveDay: (slotIdx, dir) => _handleMoveDay(index, slotIdx, dir),
                 onDelete: (slotIdx) => _handleDelete(slotIdx, index),
-                onEdit: (slotIdx) => _handleEditAttraction(index, slotIdx),
-                onReset: () => _handleResetDay(index),
               );
             },
           ),
@@ -461,8 +239,6 @@ class _DaySection extends StatefulWidget {
   final void Function(int oldIndex, int newIndex) onReorder;
   final void Function(int slotIndex, int direction) onMoveDay;
   final void Function(int slotIndex) onDelete;
-  final void Function(int slotIndex) onEdit;
-  final VoidCallback onReset;
 
   const _DaySection({
     super.key,
@@ -473,8 +249,6 @@ class _DaySection extends StatefulWidget {
     required this.onReorder,
     required this.onMoveDay,
     required this.onDelete,
-    required this.onEdit,
-    required this.onReset,
   });
 
   @override
@@ -516,12 +290,6 @@ class _DaySectionState extends State<_DaySection> {
               children: [
                 Expanded(
                   child: Text('Day ${widget.dayNumber} — $dateStr', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.restore, size: 20),
-                  tooltip: 'Reset day',
-                  onPressed: widget.onReset,
-                  visualDensity: VisualDensity.compact,
                 ),
                 IconButton(
                   icon: Icon(_keepTogether ? Icons.lock : Icons.lock_open, size: 20),
@@ -575,7 +343,6 @@ class _DaySectionState extends State<_DaySection> {
                 totalDays: widget.totalDays,
                 onMoveDay: widget.onMoveDay,
                 onDelete: widget.onDelete,
-                onEdit: widget.onEdit,
               );
             },
           ),
@@ -593,7 +360,6 @@ class _SlotTile extends StatelessWidget {
   final int totalDays;
   final void Function(int slotIndex, int direction) onMoveDay;
   final void Function(int slotIndex) onDelete;
-  final void Function(int slotIndex) onEdit;
 
   const _SlotTile({
     super.key,
@@ -603,7 +369,6 @@ class _SlotTile extends StatelessWidget {
     required this.totalDays,
     required this.onMoveDay,
     required this.onDelete,
-    required this.onEdit,
   });
 
   @override
@@ -627,7 +392,6 @@ class _SlotTile extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(icon: const Icon(Icons.edit, size: 18), onPressed: () => onEdit(slotIndex), tooltip: 'Edit attraction', visualDensity: VisualDensity.compact),
           if (dayIndex > 0)
             IconButton(icon: const Icon(Icons.arrow_back, size: 18), onPressed: () => onMoveDay(slotIndex, -1), tooltip: 'Move to previous day', visualDensity: VisualDensity.compact),
           if (dayIndex < totalDays - 1)
