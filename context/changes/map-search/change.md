@@ -1,10 +1,10 @@
 ---
 change_id: map-search
 title: "Map search with geocoding — find places by name and pin on map"
-status: impl_reviewed
+status: done
 roadmap_ref: S-08
 created: 2026-08-05
-updated: 2026-08-05
+updated: 2026-08-06
 ---
 
 # Map Search (S-08)
@@ -15,9 +15,9 @@ Post-MVP slice from `context/foundation/roadmap.md`. Adds Place autocomplete to 
 
 **Unlocks:** —
 
-## Implementation Status (2026-08-05)
+## Implementation Status (2026-08-06)
 
-**All code merged to `develop`.** Automated gates pass (74 tests, analyze clean). Manual verification pending — blocked on Android device/emulator availability.
+**All code merged to `develop`.** Automated gates pass (77 tests, analyze clean). ✅ Manually verified on Android device — search, pin drop, map fallback, and coordinate entry all work correctly. Implementation review done — 9 findings fixed.
 
 ### What was built
 - Search bar with 300ms debounce on `MapPickerScreen`
@@ -33,3 +33,4 @@ Post-MVP slice from `context/foundation/roadmap.md`. Adds Place autocomplete to 
 ### Commits
 - `137f2af` feat(map-search): native Places SDK + place names + crash fixes
 - `72ec976` fix(build): add ProGuard rules for flutter_places_sdk release build (#30)
+- `31c766c` fix(s08): apply impl-review fixes — 9 findings resolved (#31)
