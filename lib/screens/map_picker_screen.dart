@@ -5,7 +5,7 @@ import 'package:flutter_places_sdk/flutter_places_sdk.dart' hide LatLng;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../services/geocoding_service.dart';
+import '../services/places_service.dart';
 
 /// Result returned by [MapPickerScreen] when the user confirms a place.
 class MapPickerResult {
@@ -55,6 +55,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
   // Search fields.
   final _searchController = TextEditingController();
   Timer? _searchTimer;
+  int _searchSeq = 0;
   List<AutocompletePrediction> _predictions = [];
   bool _searching = false;
   String? _searchError;
@@ -76,7 +77,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     // Pre-fill search if a query was passed from the attraction dialog.
     if (widget.searchQuery != null && widget.searchQuery!.trim().isNotEmpty) {
       _searchController.text = widget.searchQuery!.trim();
-      Future.delayed(const Duration(milliseconds: 100), () {
+      _searchTimer = Timer(const Duration(milliseconds: 100), () {
         if (mounted) _performSearch(_searchController.text);
       });
     }
@@ -109,10 +110,32 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     }
   }
 
+  bool get _fallbackCoordsValid {
+    final lat = double.tryParse(_latController.text.trim());
+    final lon = double.tryParse(_lonController.text.trim());
+    return lat != null &&
+        lon != null &&
+        lat.abs() <= 90 &&
+        lon.abs() <= 180;
+  }
+
   Future<void> _openInMaps() async {
-    final url = Uri.parse('https://www.google.com/maps');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
+    final pos = _timedOut
+        ? _fallbackCoordsValid
+            ? '${_latController.text.trim()},${_lonController.text.trim()}'
+            : null
+        : _position != null
+            ? '${_position!.latitude},${_position!.longitude}'
+            : null;
+    final uri = Uri.parse(pos != null
+        ? 'https://www.google.com/maps?q=$pos'
+        : 'https://www.google.com/maps');
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('Failed to open maps: $e');
     }
   }
 
@@ -123,7 +146,10 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
         title: const Text('Pick Location'),
         actions: [
           TextButton(
-            onPressed: (_timedOut || _position != null) ? _confirm : null,
+            onPressed: (_timedOut && _fallbackCoordsValid) ||
+                    (!_timedOut && _position != null)
+                ? _confirm
+                : null,
             child: const Text('Confirm'),
           ),
         ],
@@ -147,6 +173,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
           onTap: (pos) => setState(() {
             _position = pos;
             _predictions = [];
+            _selectedName = null;
           }),
           markers: _position != null
               ? {Marker(markerId: const MarkerId('picked'), position: _position!)}
@@ -293,10 +320,11 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
       return;
     }
 
+    final seq = ++_searchSeq;
     setState(() => _searching = true);
     try {
       final results = await getPlacesService().autocomplete(query);
-      if (!mounted) return;
+      if (!mounted || seq != _searchSeq) return;
       setState(() {
         _predictions = results;
         _searching = false;
@@ -305,7 +333,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
         }
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || seq != _searchSeq) return;
       setState(() {
         _searching = false;
         _searchError = 'Failed to search. Check your connection.';
@@ -343,6 +371,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
             ),
             keyboardType: const TextInputType.numberWithOptions(
                 decimal: true, signed: true),
+            onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 8),
           TextFormField(
@@ -353,6 +382,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
             ),
             keyboardType: const TextInputType.numberWithOptions(
                 decimal: true, signed: true),
+            onChanged: (_) => setState(() {}),
           ),
         ],
       ),
