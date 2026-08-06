@@ -23,6 +23,7 @@ Trip _trip({
     createdAt: DateTime.now(),
     updatedAt: DateTime.now(),
     imageUrl: null,
+    isActive: false,
   );
 }
 
@@ -69,6 +70,7 @@ void main() {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         imageUrl: null,
+        isActive: false,
       );
       expect(
         () => TimelineService.computeTimeline(trip, [_attr(durationMin: 60)]),

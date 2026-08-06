@@ -10,7 +10,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -30,6 +30,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 5) {
             await m.addColumn(attractions, attractions.placeName);
+          }
+          if (from < 6) {
+            await m.addColumn(trips, trips.isActive as dynamic);
           }
         },
         beforeOpen: (details) async {
