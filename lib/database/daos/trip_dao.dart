@@ -78,14 +78,15 @@ class TripDao extends DatabaseAccessor<AppDatabase> with _$TripDaoMixin {
   /// Results are ordered by updatedAt descending (most recently opened first).
   Future<List<Trip>> listTripsCoveringDate(DateTime date,
       {bool? isActive}) async {
-    var query = select(db.trips)
-      ..where((t) =>
-          t.startDate.isSmallerOrEqualValue(date) &
-          t.endDate.isBiggerOrEqualValue(date));
-    if (isActive != null) {
-      query = (query)
-        ..where((t) => t.isActive.equals(isActive));
-    }
+    final query = select(db.trips)
+      ..where((t) {
+        final dateExpr = t.startDate.isSmallerOrEqualValue(date) &
+            t.endDate.isBiggerOrEqualValue(date);
+        if (isActive != null) {
+          return dateExpr & t.isActive.equals(isActive);
+        }
+        return dateExpr;
+      });
     return (query
           ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
         .get();

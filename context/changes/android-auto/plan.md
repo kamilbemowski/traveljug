@@ -424,24 +424,24 @@ trip editing.
 
 #### Automated
 
-- [x] 1.1 `dart run build_runner build` succeeds
-- [x] 1.2 `flutter analyze` passes
-- [x] 1.3 `flutter test` — all existing tests pass
-- [x] 1.4 New DAO test: createTrip(isActive: true) roundtrip
-- [x] 1.5 New DAO test: updateTrip(isActive: true) roundtrip
-- [x] 1.6 New DAO test: listTripsCoveringDate filters correctly
+- [x] 1.1 `dart run build_runner build` succeeds — 4b8fd99
+- [x] 1.2 `flutter analyze` passes — 4b8fd99
+- [x] 1.3 `flutter test` — all existing tests pass — 4b8fd99
+- [x] 1.4 New DAO test: createTrip(isActive: true) roundtrip — 4b8fd99
+- [x] 1.5 New DAO test: updateTrip(isActive: true) roundtrip — 4b8fd99
+- [x] 1.6 New DAO test: listTripsCoveringDate filters correctly — 4b8fd99
 
 #### Manual
 
-- [ ] 1.7 App opens without migration error on existing install
+- [x] 1.7 App opens without migration error on existing install — 4b8fd99
 
 ### Phase 2: Trip selection logic
 
 #### Automated
 
-- [ ] 2.1 `flutter analyze` passes
-- [ ] 2.2 6 unit tests for TripSelectionService pass
-- [ ] 2.3 All existing tests still pass
+- [x] 2.1 `flutter analyze` passes
+- [x] 2.2 6 unit tests for TripSelectionService pass
+- [x] 2.3 All existing tests still pass
 
 #### Manual
 
