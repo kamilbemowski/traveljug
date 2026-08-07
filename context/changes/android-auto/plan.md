@@ -451,11 +451,11 @@ trip editing.
 
 #### Automated
 
-- [ ] 3.1 `flutter pub get` + `flutter build apk --debug` succeeds
-- [ ] 3.2 `flutter analyze` passes
-- [ ] 3.3 Unit tests for showTodayPlan template building pass
-- [ ] 3.4 Unit tests for showTripList template building pass
-- [ ] 3.5 All existing tests still pass
+- [x] 3.1 `flutter pub get` + `flutter build apk --debug` succeeds
+- [x] 3.2 `flutter analyze` passes
+- [x] 3.3 Unit tests for showTodayPlan template building pass
+- [x] 3.4 Unit tests for showTripList template building pass
+- [x] 3.5 All existing tests still pass
 
 #### Manual
 
@@ -471,11 +471,11 @@ trip editing.
 
 #### Automated
 
-- [x] 4.1 `flutter analyze` passes
-- [x] 4.2 Widget test: toggle calls updateTrip
-- [x] 4.3 All existing tests still pass
+- [x] 4.1 `flutter analyze` passes — efbc5c3
+- [x] 4.2 Widget test: toggle calls updateTrip — efbc5c3
+- [x] 4.3 All existing tests still pass — efbc5c3
 
 #### Manual
 
-- [x] 4.4 Toggle in trip detail → saves correctly
-- [x] 4.5 Toggle in edit dialog → saves correctly
+- [x] 4.4 Toggle in trip detail → saves correctly — efbc5c3
+- [x] 4.5 Toggle in edit dialog → saves correctly — efbc5c3

@@ -49,7 +49,8 @@ class Trips extends Table {
   TextColumn get imageUrl => text().nullable()();
 
   /// Whether this trip is marked as the "active" trip for Android Auto display.
-  /// Default false. Only one trip should be active at a time (enforced by UI).
+  /// Default false. Multiple trips can be active — TripSelectionService picks
+  /// the most recently updated.
   BoolColumn get isActive => boolean().withDefault(const Constant(false))();
 }
 

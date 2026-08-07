@@ -90,4 +90,37 @@ void main() {
     final lockButtons = find.byIcon(Icons.lock_open);
     expect(lockButtons, findsWidgets);
   });
+
+  testWidgets('S-09: isActive toggle visible only when trip has dates',
+      (tester) async {
+    final trip = await seedTripWithAttractions();
+
+    await tester.pumpWidget(MaterialApp(
+      home: TripDetailScreen(trip: trip),
+    ));
+    await tester.pumpAndSettle();
+
+    // Trip has dates → toggle should be visible.
+    expect(find.text('Active trip'), findsOneWidget);
+  });
+
+  testWidgets('S-09: isActive toggle calls updateTrip', (tester) async {
+    final trip = await seedTripWithAttractions();
+
+    await tester.pumpWidget(MaterialApp(
+      home: TripDetailScreen(trip: trip),
+    ));
+    await tester.pumpAndSettle();
+
+    // Tap the switch.
+    final toggle = find.byType(Switch);
+    expect(toggle, findsOneWidget);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+
+    // Verify toggle was flipped by reading back from DB.
+    final tripDao = TripDao(db);
+    final updated = await tripDao.getTripById(trip.id);
+    expect(updated!.isActive, true);
+  });
 }

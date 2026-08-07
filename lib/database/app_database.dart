@@ -32,6 +32,8 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(attractions, attractions.placeName);
           }
           if (from < 6) {
+            // `as dynamic` — Drift 2.34 addColumn rejects BoolColumn's
+            // GeneratedColumn<bool> against GeneratedColumn<Object>.
             await m.addColumn(trips, trips.isActive as dynamic);
           }
         },

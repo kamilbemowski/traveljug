@@ -60,7 +60,7 @@ class _EditTripDialogState extends State<_EditTripDialog> {
     _startDate = widget.trip.startDate;
     _endDate = widget.trip.endDate;
     _pace = parsePace(widget.trip.pace);
-    _travelContext = parseTravelContext(widget.trip.travelContext) ?? TravelContext.city;
+    _travelContext = parseTravelContext(widget.trip.travelContext);
     _isActive = widget.trip.isActive;
   }
 
@@ -175,12 +175,17 @@ class _EditTripDialogState extends State<_EditTripDialog> {
               DropdownButtonFormField<TravelContext?>(
                 initialValue: _travelContext,
                 decoration: const InputDecoration(labelText: 'Travel context'),
-                items: [TravelContext.city, TravelContext.roadTrip]
-                    .map((c) => DropdownMenuItem(
-                          value: c,
-                          child: Text(travelContextLabel(c)),
-                        ))
-                    .toList(),
+                items: [
+                  const DropdownMenuItem<TravelContext?>(
+                    value: null,
+                    child: Text('Default (30 min)'),
+                  ),
+                  ...TravelContext.values
+                      .map((c) => DropdownMenuItem<TravelContext?>(
+                            value: c,
+                            child: Text(travelContextLabel(c)),
+                          )),
+                ],
                 onChanged: (v) => setState(() => _travelContext = v),
               ),
               SwitchListTile(

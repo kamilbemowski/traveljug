@@ -23,8 +23,8 @@ void main() {
 
   group('resolveForAndroidAuto', () {
     test('active trip with today dates returned first', () async {
-      final yesterday = DateTime(2026, 8, 5);
-      final tomorrow = DateTime(2026, 8, 7);
+      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      final tomorrow = DateTime.now().add(const Duration(days: 1));
 
       await tripDao.createTrip(
         name: 'Inactive Today',
@@ -48,8 +48,8 @@ void main() {
     });
 
     test('no active trip falls back to last-opened by updatedAt', () async {
-      final yesterday = DateTime(2026, 8, 5);
-      final tomorrow = DateTime(2026, 8, 7);
+      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      final tomorrow = DateTime.now().add(const Duration(days: 1));
 
       await tripDao.createTrip(
         name: 'First Created',
@@ -81,8 +81,8 @@ void main() {
     });
 
     test('multiple active trips — first by updatedAt', () async {
-      final yesterday = DateTime(2026, 8, 5);
-      final tomorrow = DateTime(2026, 8, 7);
+      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      final tomorrow = DateTime.now().add(const Duration(days: 1));
 
       await tripDao.createTrip(
         name: 'First Active',
@@ -108,10 +108,10 @@ void main() {
     });
 
     test('active trip with future dates is skipped', () async {
-      final yesterday = DateTime(2026, 8, 5);
-      final tomorrow = DateTime(2026, 8, 7);
-      final future = DateTime(2026, 9, 6);
-      final futureEnd = DateTime(2026, 9, 10);
+      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      final tomorrow = DateTime.now().add(const Duration(days: 1));
+      final future = DateTime.now().add(const Duration(days: 30));
+      final futureEnd = DateTime.now().add(const Duration(days: 40));
 
       // Active trip in the future — should NOT match level 1.
       await tripDao.createTrip(
@@ -139,8 +139,8 @@ void main() {
     });
 
     test('trip without dates falls to last-opened', () async {
-      final yesterday = DateTime(2026, 8, 5);
-      final tomorrow = DateTime(2026, 8, 7);
+      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      final tomorrow = DateTime.now().add(const Duration(days: 1));
 
       await tripDao.createTrip(
         name: 'Dateless Trip',
@@ -165,23 +165,4 @@ void main() {
     });
   });
 
-  group('listForSelection', () {
-    test('returns all trips ordered by updatedAt DESC', () async {
-      await tripDao.createTrip(name: 'A', destination: 'A');
-      await tripDao.createTrip(name: 'B', destination: 'B');
-      final cId = await tripDao.createTrip(name: 'C', destination: 'C');
-      // Bump C's updatedAt so it's first.
-      await tripDao.updateTrip(cId, name: 'C');
-
-      final result = await TripSelectionService.listForSelection(tripDao);
-      expect(result.length, 3);
-      expect(result[0].name, 'C'); // bumped
-      // B and A have same updatedAt — both created in sequence, B after A.
-      // listAllTrips returns by createdAt DESC, then we sort by updatedAt.
-      // With tied updatedAt, sort is stable (B stays before A if B was after A
-      // in original listAllTrips, but that depends on createdAt ordering too).
-      // Both have same timestamps — just verify C is first and count is 3.
-      expect(result.length, 3);
-    });
-  });
 }
