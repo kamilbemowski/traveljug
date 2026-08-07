@@ -10,6 +10,7 @@ class EditTripResult {
   final DateTime? endDate;
   final TravelPace pace;
   final TravelContext? travelContext;
+  final bool isActive;
   const EditTripResult({
     required this.name,
     required this.destination,
@@ -17,6 +18,7 @@ class EditTripResult {
     this.endDate,
     required this.pace,
     this.travelContext,
+    this.isActive = false,
   });
 }
 
@@ -48,6 +50,7 @@ class _EditTripDialogState extends State<_EditTripDialog> {
   late DateTime? _endDate;
   late TravelPace _pace;
   late TravelContext? _travelContext;
+  late bool _isActive;
 
   @override
   void initState() {
@@ -57,7 +60,8 @@ class _EditTripDialogState extends State<_EditTripDialog> {
     _startDate = widget.trip.startDate;
     _endDate = widget.trip.endDate;
     _pace = parsePace(widget.trip.pace);
-    _travelContext = parseTravelContext(widget.trip.travelContext) ?? TravelContext.city;
+    _travelContext = parseTravelContext(widget.trip.travelContext);
+    _isActive = widget.trip.isActive;
   }
 
   @override
@@ -99,6 +103,7 @@ class _EditTripDialogState extends State<_EditTripDialog> {
         endDate: _endDate,
         pace: _pace,
         travelContext: _travelContext,
+        isActive: _isActive,
       ),
     );
   }
@@ -170,13 +175,29 @@ class _EditTripDialogState extends State<_EditTripDialog> {
               DropdownButtonFormField<TravelContext?>(
                 initialValue: _travelContext,
                 decoration: const InputDecoration(labelText: 'Travel context'),
-                items: [TravelContext.city, TravelContext.roadTrip]
-                    .map((c) => DropdownMenuItem(
-                          value: c,
-                          child: Text(travelContextLabel(c)),
-                        ))
-                    .toList(),
+                items: [
+                  const DropdownMenuItem<TravelContext?>(
+                    value: null,
+                    child: Text('Default (30 min)'),
+                  ),
+                  ...TravelContext.values
+                      .map((c) => DropdownMenuItem<TravelContext?>(
+                            value: c,
+                            child: Text(travelContextLabel(c)),
+                          )),
+                ],
                 onChanged: (v) => setState(() => _travelContext = v),
+              ),
+              SwitchListTile(
+                title: const Text('Active trip',
+                    style: TextStyle(fontSize: 14)),
+                subtitle: const Text(
+                    'Shown in Android Auto by default',
+                    style: TextStyle(fontSize: 12)),
+                value: _isActive,
+                onChanged: (v) => setState(() => _isActive = v),
+                controlAffinity: ListTileControlAffinity.leading,
+                dense: true,
               ),
             ],
           ),

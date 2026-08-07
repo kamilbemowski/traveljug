@@ -103,6 +103,75 @@ void main() {
       );
     });
 
+    test('createTrip isActive defaults to false', () async {
+      final id = await tripDao.createTrip(
+        name: 'Default Active',
+        destination: 'Test',
+      );
+      final trip = await tripDao.getTripById(id);
+      expect(trip!.isActive, false);
+    });
+
+    test('createTrip and updateTrip isActive roundtrip', () async {
+      final id = await tripDao.createTrip(
+        name: 'Active Trip',
+        destination: 'Test',
+        isActive: true,
+      );
+      final created = await tripDao.getTripById(id);
+      expect(created!.isActive, true);
+
+      await tripDao.updateTrip(id, isActive: false);
+      final updated = await tripDao.getTripById(id);
+      expect(updated!.isActive, false);
+
+      await tripDao.updateTrip(id, isActive: true);
+      final reactivated = await tripDao.getTripById(id);
+      expect(reactivated!.isActive, true);
+    });
+
+    test('listTripsCoveringDate filters by date range and isActive', () async {
+      final today = DateTime(2026, 8, 6);
+      final yesterday = DateTime(2026, 8, 5);
+      final tomorrow = DateTime(2026, 8, 7);
+
+      // Trip covering today, active.
+      await tripDao.createTrip(
+        name: 'Active Today',
+        destination: 'Paris',
+        startDate: yesterday,
+        endDate: tomorrow,
+        isActive: true,
+      );
+      // Trip covering today, NOT active.
+      await tripDao.createTrip(
+        name: 'Inactive Today',
+        destination: 'London',
+        startDate: yesterday,
+        endDate: tomorrow,
+        isActive: false,
+      );
+      // Trip NOT covering today (future trip).
+      await tripDao.createTrip(
+        name: 'Future Trip',
+        destination: 'Tokyo',
+        startDate: DateTime(2026, 9, 1),
+        endDate: DateTime(2026, 9, 10),
+        isActive: true,
+      );
+
+      // All trips covering today (no filter).
+      final allToday =
+          await tripDao.listTripsCoveringDate(today);
+      expect(allToday.length, 2);
+
+      // Only active trips covering today.
+      final activeToday =
+          await tripDao.listTripsCoveringDate(today, isActive: true);
+      expect(activeToday.length, 1);
+      expect(activeToday.first.name, 'Active Today');
+    });
+
     test('delete — getById returns null', () async {
       final id = await tripDao.createTrip(
         name: 'To Delete',

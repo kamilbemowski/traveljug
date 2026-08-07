@@ -116,7 +116,7 @@ void main() {
       overrideDao = TimelineOverrideDao(db);
 
       // ── Assert 1: schema version is current ──────────────────────
-      expect(db.schemaVersion, 5,
+      expect(db.schemaVersion, 6,
           reason: 'R2: schema version mismatch — migration may have failed');
 
       // ── Action: write to all 3 tables ────────────────────────────

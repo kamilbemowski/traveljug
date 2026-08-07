@@ -18,6 +18,7 @@ class TripDao extends DatabaseAccessor<AppDatabase> with _$TripDaoMixin {
     TravelPace pace = TravelPace.intensive,
     TravelContext? travelContext,
     String? imageUrl,
+    bool isActive = false,
   }) {
     return into(db.trips).insert(TripsCompanion.insert(
           name: name,
@@ -27,6 +28,7 @@ class TripDao extends DatabaseAccessor<AppDatabase> with _$TripDaoMixin {
           pace: Value(pace.name),
           travelContext: Value(travelContext?.name),
           imageUrl: Value(imageUrl),
+          isActive: Value(isActive),
         ));
   }
 
@@ -53,6 +55,7 @@ class TripDao extends DatabaseAccessor<AppDatabase> with _$TripDaoMixin {
     TravelPace? pace,
     TravelContext? travelContext,
     String? imageUrl,
+    bool? isActive,
   }) async {
     final rows = await (update(db.trips)..where((t) => t.id.equals(id))).write(
           TripsCompanion(
@@ -63,10 +66,30 @@ class TripDao extends DatabaseAccessor<AppDatabase> with _$TripDaoMixin {
             pace: Value.absentIfNull(pace?.name),
             travelContext: Value.absentIfNull(travelContext?.name),
             imageUrl: Value.absentIfNull(imageUrl),
+            isActive: Value.absentIfNull(isActive),
             updatedAt: Value(DateTime.now()),
           ),
         );
     return rows > 0;
+  }
+
+  /// Returns trips whose date range covers [date]. If [isActive] is provided,
+  /// filters to only trips matching that active state.
+  /// Results are ordered by updatedAt descending (most recently opened first).
+  Future<List<Trip>> listTripsCoveringDate(DateTime date,
+      {bool? isActive}) async {
+    final query = select(db.trips)
+      ..where((t) {
+        final dateExpr = t.startDate.isSmallerOrEqualValue(date) &
+            t.endDate.isBiggerOrEqualValue(date);
+        if (isActive != null) {
+          return dateExpr & t.isActive.equals(isActive);
+        }
+        return dateExpr;
+      });
+    return (query
+          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
+        .get();
   }
 
   /// Deletes a trip by id. Cascades to its attractions per FK constraint.

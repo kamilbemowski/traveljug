@@ -127,6 +127,21 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, Trip> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -139,6 +154,7 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, Trip> {
     createdAt,
     updatedAt,
     imageUrl,
+    isActive,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -219,6 +235,12 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, Trip> {
         imageUrl.isAcceptableOrUnknown(data['image_url']!, _imageUrlMeta),
       );
     }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
     return context;
   }
 
@@ -268,6 +290,10 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, Trip> {
         DriftSqlType.string,
         data['${effectivePrefix}image_url'],
       ),
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
     );
   }
 
@@ -296,6 +322,10 @@ class Trip extends DataClass implements Insertable<Trip> {
 
   /// Optional — no FR reference; convenience for future UI.
   final String? imageUrl;
+
+  /// Whether this trip is marked as the "active" trip for Android Auto display.
+  /// Default false. Only one trip should be active at a time (enforced by UI).
+  final bool isActive;
   const Trip({
     required this.id,
     required this.name,
@@ -307,6 +337,7 @@ class Trip extends DataClass implements Insertable<Trip> {
     required this.createdAt,
     required this.updatedAt,
     this.imageUrl,
+    required this.isActive,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -329,6 +360,7 @@ class Trip extends DataClass implements Insertable<Trip> {
     if (!nullToAbsent || imageUrl != null) {
       map['image_url'] = Variable<String>(imageUrl);
     }
+    map['is_active'] = Variable<bool>(isActive);
     return map;
   }
 
@@ -352,6 +384,7 @@ class Trip extends DataClass implements Insertable<Trip> {
       imageUrl: imageUrl == null && nullToAbsent
           ? const Value.absent()
           : Value(imageUrl),
+      isActive: Value(isActive),
     );
   }
 
@@ -371,6 +404,7 @@ class Trip extends DataClass implements Insertable<Trip> {
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       imageUrl: serializer.fromJson<String?>(json['imageUrl']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
     );
   }
   @override
@@ -387,6 +421,7 @@ class Trip extends DataClass implements Insertable<Trip> {
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'imageUrl': serializer.toJson<String?>(imageUrl),
+      'isActive': serializer.toJson<bool>(isActive),
     };
   }
 
@@ -401,6 +436,7 @@ class Trip extends DataClass implements Insertable<Trip> {
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<String?> imageUrl = const Value.absent(),
+    bool? isActive,
   }) => Trip(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -414,6 +450,7 @@ class Trip extends DataClass implements Insertable<Trip> {
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     imageUrl: imageUrl.present ? imageUrl.value : this.imageUrl,
+    isActive: isActive ?? this.isActive,
   );
   Trip copyWithCompanion(TripsCompanion data) {
     return Trip(
@@ -431,6 +468,7 @@ class Trip extends DataClass implements Insertable<Trip> {
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       imageUrl: data.imageUrl.present ? data.imageUrl.value : this.imageUrl,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
     );
   }
 
@@ -446,7 +484,8 @@ class Trip extends DataClass implements Insertable<Trip> {
           ..write('travelContext: $travelContext, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('imageUrl: $imageUrl')
+          ..write('imageUrl: $imageUrl, ')
+          ..write('isActive: $isActive')
           ..write(')'))
         .toString();
   }
@@ -463,6 +502,7 @@ class Trip extends DataClass implements Insertable<Trip> {
     createdAt,
     updatedAt,
     imageUrl,
+    isActive,
   );
   @override
   bool operator ==(Object other) =>
@@ -477,7 +517,8 @@ class Trip extends DataClass implements Insertable<Trip> {
           other.travelContext == this.travelContext &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
-          other.imageUrl == this.imageUrl);
+          other.imageUrl == this.imageUrl &&
+          other.isActive == this.isActive);
 }
 
 class TripsCompanion extends UpdateCompanion<Trip> {
@@ -491,6 +532,7 @@ class TripsCompanion extends UpdateCompanion<Trip> {
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<String?> imageUrl;
+  final Value<bool> isActive;
   const TripsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
@@ -502,6 +544,7 @@ class TripsCompanion extends UpdateCompanion<Trip> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.imageUrl = const Value.absent(),
+    this.isActive = const Value.absent(),
   });
   TripsCompanion.insert({
     this.id = const Value.absent(),
@@ -514,6 +557,7 @@ class TripsCompanion extends UpdateCompanion<Trip> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.imageUrl = const Value.absent(),
+    this.isActive = const Value.absent(),
   }) : name = Value(name),
        destination = Value(destination);
   static Insertable<Trip> custom({
@@ -527,6 +571,7 @@ class TripsCompanion extends UpdateCompanion<Trip> {
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<String>? imageUrl,
+    Expression<bool>? isActive,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -539,6 +584,7 @@ class TripsCompanion extends UpdateCompanion<Trip> {
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (imageUrl != null) 'image_url': imageUrl,
+      if (isActive != null) 'is_active': isActive,
     });
   }
 
@@ -553,6 +599,7 @@ class TripsCompanion extends UpdateCompanion<Trip> {
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<String?>? imageUrl,
+    Value<bool>? isActive,
   }) {
     return TripsCompanion(
       id: id ?? this.id,
@@ -565,6 +612,7 @@ class TripsCompanion extends UpdateCompanion<Trip> {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       imageUrl: imageUrl ?? this.imageUrl,
+      isActive: isActive ?? this.isActive,
     );
   }
 
@@ -601,6 +649,9 @@ class TripsCompanion extends UpdateCompanion<Trip> {
     if (imageUrl.present) {
       map['image_url'] = Variable<String>(imageUrl.value);
     }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
     return map;
   }
 
@@ -616,7 +667,8 @@ class TripsCompanion extends UpdateCompanion<Trip> {
           ..write('travelContext: $travelContext, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('imageUrl: $imageUrl')
+          ..write('imageUrl: $imageUrl, ')
+          ..write('isActive: $isActive')
           ..write(')'))
         .toString();
   }
@@ -1581,6 +1633,7 @@ typedef $$TripsTableCreateCompanionBuilder =
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<String?> imageUrl,
+      Value<bool> isActive,
     });
 typedef $$TripsTableUpdateCompanionBuilder =
     TripsCompanion Function({
@@ -1594,6 +1647,7 @@ typedef $$TripsTableUpdateCompanionBuilder =
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<String?> imageUrl,
+      Value<bool> isActive,
     });
 
 final class $$TripsTableReferences
@@ -1674,6 +1728,11 @@ class $$TripsTableFilterComposer extends Composer<_$AppDatabase, $TripsTable> {
 
   ColumnFilters<String> get imageUrl => $composableBuilder(
     column: $table.imageUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1761,6 +1820,11 @@ class $$TripsTableOrderingComposer
     column: $table.imageUrl,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TripsTableAnnotationComposer
@@ -1805,6 +1869,9 @@ class $$TripsTableAnnotationComposer
 
   GeneratedColumn<String> get imageUrl =>
       $composableBuilder(column: $table.imageUrl, builder: (column) => column);
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
 
   Expression<T> attractionsRefs<T extends Object>(
     Expression<T> Function($$AttractionsTableAnnotationComposer a) f,
@@ -1870,6 +1937,7 @@ class $$TripsTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> imageUrl = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
               }) => TripsCompanion(
                 id: id,
                 name: name,
@@ -1881,6 +1949,7 @@ class $$TripsTableTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 imageUrl: imageUrl,
+                isActive: isActive,
               ),
           createCompanionCallback:
               ({
@@ -1894,6 +1963,7 @@ class $$TripsTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> imageUrl = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
               }) => TripsCompanion.insert(
                 id: id,
                 name: name,
@@ -1905,6 +1975,7 @@ class $$TripsTableTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 imageUrl: imageUrl,
+                isActive: isActive,
               ),
           withReferenceMapper: (p0) => p0
               .map(

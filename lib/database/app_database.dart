@@ -10,7 +10,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -30,6 +30,11 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 5) {
             await m.addColumn(attractions, attractions.placeName);
+          }
+          if (from < 6) {
+            // `as dynamic` — Drift 2.34 addColumn rejects BoolColumn's
+            // GeneratedColumn<bool> against GeneratedColumn<Object>.
+            await m.addColumn(trips, trips.isActive as dynamic);
           }
         },
         beforeOpen: (details) async {
