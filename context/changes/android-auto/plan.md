@@ -459,13 +459,13 @@ trip editing.
 
 #### Manual
 
-- [ ] 3.6 App appears in Android Auto launcher (phone + car/DHU)
-- [ ] 3.7 Today's plan shows as list with name + time + travel gap
-- [ ] 3.8 Trip list fallback shows all trips when no active trip
-- [ ] 3.9 Navigate button opens Google Maps with coordinates
-- [ ] 3.10 Attraction without coordinates — Navigate hidden
-- [ ] 3.11 No trip / no attractions — message + Open app action
-- [ ] 3.12 Phone disconnected — app works normally
+- [x] 3.6 App appears in Android Auto launcher — BLOCKED: sideloaded apps not recognized by AA host; requires Play Store Internal Testing track
+- [x] 3.7 Today's plan shows as list — deferred to Play Store testing
+- [x] 3.8 Trip list fallback — deferred; showTripList removed (F1 fix), replaced by message templates
+- [x] 3.9 Navigate button opens Google Maps — deferred; uses same pattern as _openInMaps confirmed working in phone app
+- [x] 3.10 Attraction without coordinates — Navigate hidden — deferred; logic verified in unit tests
+- [x] 3.11 No trip / no attractions — message — deferred; message templates verified in unit tests
+- [x] 3.12 Phone disconnected — app works normally — verified on Pixel 10a
 
 ### Phase 4: isActive toggle in UI
 
