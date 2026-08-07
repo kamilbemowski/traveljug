@@ -324,7 +324,8 @@ class Trip extends DataClass implements Insertable<Trip> {
   final String? imageUrl;
 
   /// Whether this trip is marked as the "active" trip for Android Auto display.
-  /// Default false. Only one trip should be active at a time (enforced by UI).
+  /// Default false. Multiple trips can be active — TripSelectionService picks
+  /// the most recently updated.
   final bool isActive;
   const Trip({
     required this.id,
