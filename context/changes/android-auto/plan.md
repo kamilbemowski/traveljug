@@ -439,13 +439,13 @@ trip editing.
 
 #### Automated
 
-- [x] 2.1 `flutter analyze` passes
-- [x] 2.2 6 unit tests for TripSelectionService pass
-- [x] 2.3 All existing tests still pass
+- [x] 2.1 `flutter analyze` passes — d7b9426
+- [x] 2.2 6 unit tests for TripSelectionService pass — d7b9426
+- [x] 2.3 All existing tests still pass — d7b9426
 
 #### Manual
 
-- [ ] 2.4 Verify trip selection with 3 trips (active, inactive, other dates)
+- [x] 2.4 Verify trip selection with 3 trips (active, inactive, other dates) — d7b9426
 
 ### Phase 3: Android Auto integration
 
@@ -471,11 +471,11 @@ trip editing.
 
 #### Automated
 
-- [ ] 4.1 `flutter analyze` passes
-- [ ] 4.2 Widget test: toggle calls updateTrip
-- [ ] 4.3 All existing tests still pass
+- [x] 4.1 `flutter analyze` passes
+- [x] 4.2 Widget test: toggle calls updateTrip
+- [x] 4.3 All existing tests still pass
 
 #### Manual
 
-- [ ] 4.4 Toggle in trip detail → saves correctly
-- [ ] 4.5 Toggle in edit dialog → saves correctly
+- [x] 4.4 Toggle in trip detail → saves correctly
+- [x] 4.5 Toggle in edit dialog → saves correctly

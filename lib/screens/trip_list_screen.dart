@@ -47,6 +47,7 @@ class _TripListScreenState extends State<TripListScreen> {
         endDate: result.endDate,
         pace: result.pace,
         travelContext: result.travelContext,
+        isActive: result.isActive,
       );
     } catch (e) {
       if (!mounted) return;

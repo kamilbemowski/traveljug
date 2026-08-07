@@ -135,6 +135,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         endDate: result.endDate,
         pace: result.pace,
         travelContext: result.travelContext,
+        isActive: result.isActive,
       );
     } catch (e) {
       if (!mounted) return;
@@ -324,6 +325,35 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
               const SizedBox(height: 4),
               Text('${_formatDate(t.startDate)} → ${_formatDate(t.endDate)}', style: const TextStyle(color: Colors.grey)),
               Text('Pace: ${t.pace}', style: const TextStyle(color: Colors.grey)),
+              if (t.startDate != null && t.endDate != null)
+                Row(
+                  children: [
+                    Switch(
+                      value: t.isActive,
+                      onChanged: (v) async {
+                        try {
+                          final db = await getDatabase();
+                          await TripDao(db).updateTrip(t.id, isActive: v);
+                          if (!mounted) return;
+                          setState(() {
+                            _trip = _trip?.copyWith(isActive: v);
+                          });
+                        } catch (e) {
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text(
+                                    'Failed to update active status.')),
+                          );
+                        }
+                      },
+                      materialTapTargetSize:
+                          MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    const Text('Active trip',
+                        style: TextStyle(fontSize: 13)),
+                  ],
+                ),
             ],
           ),
         ),
