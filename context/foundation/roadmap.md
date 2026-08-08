@@ -29,8 +29,10 @@ TravelJug jest dziś kalkulatorem intensywności podróży — oblicza timeline,
 | ID    | Change ID        | Outcome (user can …)                                          | Prerequisites | PRD refs                       | Status   |
 | ----- | ---------------- | ------------------------------------------------------------- | ------------- | ------------------------------ | -------- |
 | S-08  | map-search       | search for places by name in the map picker and pin results   | S-06          | FR-006, FR-007, FR-008         | done     |
-| S-07  | edit-delete-everything | edit and delete every entity — trips, attractions, overrides — from the UI | —             | FR-001, FR-002, FR-003, FR-004, FR-005 | impl_reviewed    |
+| S-07  | edit-delete-everything | edit and delete every entity — trips, attractions, overrides — from the UI | —             | FR-001, FR-002, FR-003, FR-004, FR-005 | done     |
 | S-07-bf | edit-delete-null-fields | fix 3 silent-revert bugs: clear-date, clear-location, travel-context null→city drift | S-07 | R1, R2, R3 (impl-review v2) | parked |
+| S-09  | android-auto      | view today's travel plan on car dashboard via Android Auto | S-06, S-07 | shape-notes §Vision | implemented |
+| DEP-01 | dependency-update | update all 30 packages + KGP fix + vulnerability scanner in CI | — | build quality | done |
 
 ## Streams
 
@@ -80,11 +82,11 @@ What's already in place in the codebase as of 2026-08-05 (znane z projektu).
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Niski — czysta warstwa UI nad istniejącym DAO. Żadnych nowych zależności, żadnych zmian w schemie, żaden wpływ na timeline engine.
-- **Status:** impl_reviewed (v2 review: 3 warnings, 3 observations — see `context/changes/edit-delete-everything/reviews/impl-review-v2.md`)
+- **Status:** done (v2 review: 3 warnings parked as S-07-bf)
 
 ## Backlog Handoff
 
-*(Pusty — wszystkie zaplanowane slice'y z v2 zostały zaimplementowane. S-09—S-11 są zaparkowane.)*
+*(S-10—S-11 zaparkowane. DEP-01 zaplanowany.)*
 
 ## Open Roadmap Questions
 
@@ -93,7 +95,6 @@ What's already in place in the codebase as of 2026-08-05 (znane z projektu).
 ## Parked
 
 - **S-07-bf (null-field silent-revert bugs)** — 3 warningi z impl-review v2: clear-date button cicho cofany przez `Value.absentIfNull`, to samo dla clear-location w edit attraction, travelContext null→city drift. Why parked: niski priorytet, nie dotyka danych, fixy kosmetyczne (usunięcie 3 buttonów + 1 fallback). Review: `context/changes/edit-delete-everything/reviews/impl-review-v2.md`.
-- **S-09 (Android Auto)** — Why parked: poza scope v2. Wróci w następnej dostawie.
 - **S-10 (GPS notifications)** — Why parked: poza scope v2.
 - **S-11 (OpenRouter AI suggestions)** — Why parked: poza scope v2. Wymaga osobnego researchu API.
 - **Cloud sync / multi-device** — Why parked: per PRD §Non-Goals.
@@ -101,4 +102,6 @@ What's already in place in the codebase as of 2026-08-05 (znane z projektu).
 ## Done
 
 - **S-01—S-06: MVP TravelJug** — Zarchiwizowane w oryginalnym roadmap.md (archiwum: `context/foundation/archive/2026-08-05-roadmap-mvp.md`). 9 slice'ów, 66 testów, wszystkie zrealizowane.
+- **S-07: Edit & Delete Everything** — Pełny CRUD w UI. Edycja tripów i atrakcji, usuwanie z potwierdzeniem, reset dnia. 8 findingów z review załatanych. Commit `e29b066`.
 - **S-08: Map Search** — Wyszukiwanie miejsc na mapie przez autocomplete Google Places SDK. Zweryfikowane na urządzeniu Android. 77 testów, 9 findingów z review załatanych. Commit `e29b066`.
+- **S-09: Android Auto** — Widok dzisiejszego planu podróży na desce rozdzielczej samochodu. flutter_carplay, ListTemplate, isActive flaga. 90 testów. Wymaga Play Store Internal Testing do weryfikacji AA. Commit `938919e`.
